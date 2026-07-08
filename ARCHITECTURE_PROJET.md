@@ -1,0 +1,168 @@
+# Architecture technique — Détection précoce du décrochage étudiant
+
+Document d'architecture de la solution d'IA (compétence **C7**). Il décrit
+l'organisation du code, les flux de données, les modules et les contraintes.
+
+## Informations générales
+
+| Champ | Valeur |
+|---|---|
+| Nom du projet | `decrochage` |
+| Type de projet | ML — classification binaire (`abandon`) + régression secondaire (`moyenne_finale`) |
+| Langage principal | `Python` |
+| Runtime | `Python 3.13` |
+| Gestionnaire de dépendances | `uv` |
+| Point d'entrée principal | Notebook `notebooks/decrochage_etudiant.ipynb` + package `decrochage` |
+| Environnement cible | Batch local / conteneur (scoring hebdomadaire à mi-S1) |
+
+## Vue d'ensemble
+
+Socle applicatif dans `src/decrochage/` (code déterministe reproductible),
+notebook certifiant unique comme restitution de bout en bout, données brutes
+immuables sous `data/raw/`, artefacts générés (modèle, figures) sous
+`artifacts/`. L'architecture doit rendre lisibles : l'entrée des données
+(SI scolarité + LMS + catalogue), les couches de préparation anti-fuite,
+l'inférence (probabilité de décrochage) et la restitution aux référents.
+
+## Arborescence
+
+```text
+examen/
+├── pyproject.toml              # projet uv (Python 3.13), dépendances, outils
+├── uv.lock                     # versions résolues
+├── .python-version             # 3.13
+├── .gitignore
+├── ARCHITECTURE_PROJET.md      # ce document (C7)
+├── README.md
+├── data/
+│   ├── raw/                    # 3 CSV fournis (immuables, livrables)
+│   └── processed/              # jeu nettoyé régénéré par le notebook
+├── notebooks/
+│   └── decrochage_etudiant.ipynb   # notebook certifiant (plan imposé 0→15)
+├── src/decrochage/            # package réutilisable
+│   ├── __init__.py
+│   ├── preprocessing.py        # parsing (%, virgules, km), dates, normalisation, dédoublonnage
+│   ├── features.py             # périmètre anti-fuite + jointure catalogue + feature engineering
+│   └── serving.py              # ModelBundle (joblib) + contrat predict (C6)
+├── artifacts/
+│   ├── models/                 # model_bundle.joblib
+│   └── figures/                # PNG exportés par le notebook
+└── reports/                    # énoncé, support de soutenance
+```
+
+## Diagramme d'architecture (ingestion → features → inférence → restitution)
+
+```text
+   +----------------+   +------------------+   +-------------------+
+   | SI Scolarité   |   |      LMS         |   | Catalogue         |
+   | état civil,    |   | connexions,      |   | formations        |
+   | bac, bourse    |   | heures, rendus   |   | (référence)       |
+   +--------+-------+   +--------+---------+   +---------+---------+
+            |                    |                       |
+            +---------+----------+-----------------------+
+                      v
+          +---------------------------+   Extraction planifiée (mi-S1)
+          |  Ingestion / consolidation|   1 ligne = 1 étudiant
+          +------------+--------------+
+                       v
+          +---------------------------+   decrochage.preprocessing + features
+          |  Préparation & features   |   parsing, normalisation, jointure,
+          |  (périmètre anti-fuite)   |   feature engineering, verrou fuite
+          +------------+--------------+
+                       v
+          +---------------------------+   ModelBundle (joblib) :
+          |   Inférence (scoring)     |   Pipeline + seuil + catalogue
+          |   predict_proba_abandon   |   → proba_abandon + alerte
+          +------------+--------------+
+                       v
+          +---------------------------+   Tableau de bord référents
+          |  Restitution & pilotage   |   liste priorisée + facteurs (SHAP)
+          |  (décision HUMAINE)       |   audit équité + journalisation
+          +------------+--------------+
+                       v
+          +---------------------------+
+          |  Monitoring & MLOps (C9)  |   drift, perf, ré-entraînement
+          +---------------------------+
+```
+
+## Flux principaux
+
+### Flux d'entraînement (notebook)
+
+```text
+data/raw/*.csv
+   → clean_raw (dédoublonnage, parsing nombres/dates, normalisation)
+   → enrich_with_catalogue (jointure filiere)
+   → add_engineered_features (taux de rendu, intensité LMS, ...)
+   → scoring_feature_columns + assert_no_leakage (verrou anti-fuite)
+   → split stratifié train/test
+   → Pipeline(impute+encode+scale+LogReg), GridSearchCV (AUC)
+   → seuil par minimisation du coût métier (FN:FP)
+   → sérialisation ModelBundle (joblib)
+```
+
+### Flux d'inférence (production)
+
+```text
+DataFrame brut (SI+LMS)
+   → serving.prepare_features (clean_raw + jointure catalogue embarqué + features)
+   → bundle.pipeline.predict_proba
+   → proba_abandon + alerte (seuil)
+   → restitution priorisée aux référents (décision humaine)
+```
+
+## Modules applicatifs
+
+| Module | Responsabilité | Entrées | Sorties |
+|---|---|---|---|
+| `decrochage.preprocessing` | Nettoyage déterministe des données brutes | DataFrame brut | DataFrame typé/normalisé |
+| `decrochage.features` | Périmètre de scoring anti-fuite, jointure catalogue, feature engineering | DataFrame nettoyé | Features + garde-fous |
+| `decrochage.serving` | Bundle sérialisable + contrat de prédiction | Bundle, DataFrame brut | `proba_abandon`, `alerte` |
+| `notebooks/…` | Restitution certifiante bout-en-bout (C1→C9) | Données + package | Analyses, modèle, figures |
+
+## Contrats d'entrée / sortie
+
+| Contrat | Format | Producteur | Consommateur | Validation |
+|---|---|---|---|---|
+| Données étudiants | CSV brut (33 colonnes) | SI scolarité / LMS | `preprocessing.clean_raw` | dictionnaire de données, bornes |
+| Catalogue formations | CSV (7 colonnes) | Référentiel filières | `features.enrich_with_catalogue` | jointure `filiere` (100 %) |
+| Score de risque | DataFrame `{proba_abandon: float∈[0,1], alerte: 0/1}` | `serving.predict_proba_abandon` | Tableau de bord référents | seuil documenté |
+
+## Stockage et données
+
+| Stockage | Rôle | Données | Rétention | Sensibilité |
+|---|---|---|---|---|
+| `data/raw/` | Données sources | 3 CSV fournis | Année universitaire | Sensible (scolaire) |
+| `data/processed/` | Jeu nettoyé | CSV régénérable | Éphémère | Sensible |
+| `artifacts/models/` | Modèle sérialisé | `model_bundle.joblib` | Versionné | Interne |
+
+## Contraintes (C7)
+
+| Type | Contrainte | Réponse |
+|---|---|---|
+| Technique | ~5 200 étudiants/an, latence non critique | Batch hebdomadaire, modèle linéaire léger |
+| RGPD | Données scolaires sensibles | Minimisation, finalité limitée, pas de décision automatisée, information des étudiants |
+| Éco-conception | Sobriété | Régression logistique (coût de calcul négligeable) |
+| Organisationnelle | Adoption équipes | Explicabilité (coefficients, SHAP), score = aide |
+| Économique | Budget d'accompagnement limité | Priorisation par score (top-K) selon capacité tuteurs |
+
+## Stack
+
+| Besoin | Outil | Rôle |
+|---|---|---|
+| Environnement / dépendances | `uv` | Lockfile, exécution, packaging |
+| Packaging | `pyproject.toml` + layout `src/` | Package `decrochage` installable |
+| Data / ML | `pandas`, `numpy`, `scikit-learn`, `xgboost` | Préparation, modèles, métriques |
+| Explicabilité | `shap`, `permutation_importance` | Facteurs de risque |
+| Sérialisation | `joblib` | Bundle modèle |
+| Restitution | `jupyter`, `matplotlib`, `seaborn` | Notebook certifiant, visualisations |
+| Qualité | `ruff`, `black` | Lint, formatage |
+
+## Points d'attention
+
+- Le **périmètre de scoring anti-fuite** (`features.scoring_feature_columns` +
+  `assert_no_leakage`) est le verrou central : toute nouvelle variable doit être
+  qualifiée (disponible à mi-S1 ? non identifiante ? non-leurre ?) avant ajout.
+- Le **bundle** embarque le catalogue pour être auto-suffisant à l'inférence.
+- Les performances rapportées valent sur **données synthétiques** ; revalidation
+  sur données réelles + A/B test avant tout déploiement.

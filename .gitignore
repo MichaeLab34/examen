@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Artefacts générés (modèles, figures) — régénérables par le notebook
+artifacts/models/*.joblib
+artifacts/figures/*.png
+
+# Données dérivées (les données brutes data/raw/ restent versionnées comme livrable)
+data/processed/*.csv
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
