@@ -28,6 +28,7 @@ examen/
 │   ├── training.py             # entraînement industrialisé train/validation/test
 │   ├── serving.py              # bundle modèle + fonction predict (contrat C6)
 │   ├── monitoring.py           # rapport de dérive PSI (C9)
+│   ├── persistence.py          # persistance SQL + couches Bronze/Silver/Gold
 │   ├── api.py                  # API FastAPI /health /ready /predict
 │   └── cli.py                  # commandes batch et service
 ├── docs/                       # model card, industrialisation, monitoring, menaces
@@ -57,6 +58,8 @@ uv sync --group dev                       # installe les outils de qualité et t
 uv run jupyter lab                        # ouvre le notebook
 uv run jupyter nbconvert --to notebook --execute --inplace notebooks/decrochage_etudiant.ipynb
 uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
+uv run decrochage init-db
+uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 uv run decrochage serve                   # démarre l'API FastAPI
 uv run ruff check . ; uv run black --check . ; uv run pytest
@@ -66,9 +69,12 @@ uv run ruff check . ; uv run black --check . ; uv run pytest
 
 Le notebook reste le livrable certifiant. Le chemin production léger est porté
 par le package : entraînement avec seuil choisi sur validation, bundle joblib,
-CLI, API FastAPI, Dockerfile, CI GitHub Actions et rapport de dérive PSI. Voir
-`docs/industrialisation.md`, `docs/model_card.md`, `docs/monitoring_plan.md` et
-`docs/threat_model.md`.
+CLI, API FastAPI, persistance SQL en architecture médaillon, Dockerfile, CI
+GitHub Actions et rapport de dérive PSI. La base par défaut est
+`artifacts/decrochage.db` ; `DECROCHAGE_DATABASE_URL` permet de viser une autre
+base compatible SQLAlchemy. Cette base contient des données étudiantes et reste
+hors versionnement Git. Voir `docs/industrialisation.md`,
+`docs/model_card.md`, `docs/monitoring_plan.md` et `docs/threat_model.md`.
 
 ## Données
 

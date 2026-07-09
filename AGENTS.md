@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository is a Python 3.13 ML project for early detection of student dropout risk. Reusable package code lives in `src/decrochage/`: `preprocessing.py` cleans raw inputs, `features.py` defines anti-leakage feature engineering, `training.py` trains a bundle, `serving.py` predicts, and `api.py`/`cli.py` expose production paths. The main certification deliverable is `notebooks/decrochage_etudiant.ipynb`. Treat `reports/Enonce_cas_usage.pdf` as the source of truth for certification requirements. Production notes are in `docs/`.
+This repository is a Python 3.13 ML project for early detection of student dropout risk. Reusable package code lives in `src/decrochage/`: `preprocessing.py` cleans raw inputs, `features.py` defines anti-leakage feature engineering, `training.py` trains a bundle, `serving.py` predicts, `persistence.py` stores Bronze/Silver/Gold SQL layers, and `api.py`/`cli.py` expose production paths. The main certification deliverable is `notebooks/decrochage_etudiant.ipynb`. Treat `reports/Enonce_cas_usage.pdf` as the source of truth for certification requirements. Production notes are in `docs/`.
 
 ## Build, Test, and Development Commands
 
@@ -10,6 +10,8 @@ This repository is a Python 3.13 ML project for early detection of student dropo
 - `uv run jupyter lab` starts the local notebook environment.
 - `uv run jupyter nbconvert --to notebook --execute --inplace notebooks/decrochage_etudiant.ipynb` executes the full notebook workflow.
 - `uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv` validates data and leakage guards.
+- `uv run decrochage init-db` creates the local SQL database at `artifacts/decrochage.db` unless `DECROCHAGE_DATABASE_URL` is set.
+- `uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv` persists Bronze raw rows, Silver cleaned rows, and Gold ML features.
 - `uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv` trains `artifacts/models/model_bundle.joblib`.
 - `uv run decrochage serve` starts the FastAPI service.
 - `uv run pytest` runs automated tests.
@@ -31,4 +33,4 @@ Recent commits use short, imperative summaries in French or English, for example
 
 ## Security & Agent-Specific Instructions
 
-Treat `data/raw/` as sensitive and immutable. Do not commit credentials, local notebooks with secrets, or large regenerated artifacts unless they are required deliverables. The related Obsidian vault is at `/Users/michael/ObsidianVaults/Formation_IA/`. Never use `rm -rf`; use `trash <path>` so files remain recoverable.
+Treat `data/raw/` and generated SQLite databases under `artifacts/` as sensitive. Do not commit credentials, local notebooks with secrets, generated databases, or large regenerated artifacts unless they are required deliverables. The related Obsidian vault is at `/Users/michael/ObsidianVaults/Formation_IA/`. Never use `rm -rf`; use `trash <path>` so files remain recoverable.

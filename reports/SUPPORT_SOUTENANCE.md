@@ -11,7 +11,7 @@ SUPPORT DE SOUTENANCE — à convertir en PDF ou PPTX.
 Format : Marp (https://marp.app).
   - VS Code : extension « Marp for VS Code » → clic droit → Export slide deck → PDF/PPTX.
   - CLI     : npx @marp-team/marp-cli SUPPORT_SOUTENANCE.md --pptx   (ou --pdf)
-Chaque slide est séparée par « --- ». Les blocs <!-- ... --> sont les NOTES
+Chaque slide est séparée par « --- ». Les blocs de commentaires HTML sont les NOTES
 ORATEUR (deviennent les notes du présentateur en PPTX ; invisibles à l'écran).
 Cible : 30 min de présentation + 30 min de questions. ~19 slides.
 Budget temps indiqué par slide (total ≈ 28 min, garde une marge).
@@ -103,7 +103,7 @@ seulement la note ? » → parce que la décision métier est binaire.
 |---|---|---|
 | **Fuite de données** | `moyenne_finale` | exclue des features |
 | **Fuite temporelle** | `moyenne_partiels_s1`, `nb_ue_validees_s1` | hors périmètre mi-S1 |
-| **Leurres** | `groupe_td`, `couleur_carte`, `jour_inscription` | prouvés inutiles, exclus |
+| **Leurres** | `groupe_td`, `couleur_carte_etudiante`, `jour_inscription` | prouvés inutiles, exclus |
 
 + exclure identifiants, constantes, texte libre brut.
 

@@ -43,6 +43,65 @@ class TrainingResult:
     output_path: Path | None = None
 
 
+def split_train_validation_test_indices(
+    y: pd.Series,
+    *,
+    random_state: int = 42,
+    allow_fallback: bool = False,
+) -> tuple[pd.Index, pd.Index, pd.Index]:
+    """Return train, validation and test indices with the project split policy."""
+    class_counts = y.value_counts(dropna=False)
+    can_stratify = len(y) >= 5 and len(class_counts) > 1 and class_counts.min() >= 2
+    stratify = y if can_stratify else None
+
+    try:
+        train_val_idx, test_idx = train_test_split(
+            y.index,
+            test_size=0.2,
+            random_state=random_state,
+            stratify=stratify,
+        )
+        y_train_val = y.loc[train_val_idx]
+        val_stratify = (
+            y_train_val if can_stratify and y_train_val.value_counts().min() >= 2 else None
+        )
+        train_idx, val_idx = train_test_split(
+            train_val_idx,
+            test_size=0.25,
+            random_state=random_state,
+            stratify=val_stratify,
+        )
+    except ValueError:
+        if not allow_fallback:
+            raise
+        ordered = list(y.index)
+        n_test = max(1, round(len(ordered) * 0.2)) if len(ordered) > 1 else 0
+        n_val = max(1, round((len(ordered) - n_test) * 0.25)) if len(ordered) > 2 else 0
+        test_idx = ordered[-n_test:] if n_test else []
+        val_idx = ordered[-n_test - n_val : -n_test] if n_val else []
+        train_idx = [idx for idx in ordered if idx not in set(test_idx) | set(val_idx)]
+
+    return pd.Index(train_idx), pd.Index(val_idx), pd.Index(test_idx)
+
+
+def assign_split_labels(
+    y: pd.Series,
+    *,
+    random_state: int = 42,
+    allow_fallback: bool = False,
+) -> pd.Series:
+    """Label rows as train, validation or test using the canonical split policy."""
+    train_idx, val_idx, test_idx = split_train_validation_test_indices(
+        y,
+        random_state=random_state,
+        allow_fallback=allow_fallback,
+    )
+    labels = pd.Series("train", index=y.index, dtype="object")
+    labels.loc[val_idx] = "validation"
+    labels.loc[test_idx] = "test"
+    return labels
+
+
 def build_preprocessor(X: pd.DataFrame) -> ColumnTransformer:
     """Build the preprocessing pipeline for tabular scoring features."""
     numeric_cols = X.select_dtypes(include=["number", "bool"]).columns.tolist()
@@ -139,20 +198,13 @@ def train_model(
     X = df[feature_cols]
     y = df[F.TARGET_CLF].astype(int)
 
-    X_train_val, X_test, y_train_val, y_test = train_test_split(
-        X,
+    train_idx, val_idx, test_idx = split_train_validation_test_indices(
         y,
-        test_size=0.2,
         random_state=random_state,
-        stratify=y,
     )
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_train_val,
-        y_train_val,
-        test_size=0.25,
-        random_state=random_state,
-        stratify=y_train_val,
-    )
+    X_train, y_train = X.loc[train_idx], y.loc[train_idx]
+    X_val, y_val = X.loc[val_idx], y.loc[val_idx]
+    X_test, y_test = X.loc[test_idx], y.loc[test_idx]
 
     pipeline = Pipeline(
         [

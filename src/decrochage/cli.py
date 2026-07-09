@@ -11,6 +11,15 @@ import typer
 
 from . import features as F
 from .monitoring import build_drift_report, write_drift_report
+from .persistence import (
+    DATABASE_URL_ENV,
+    initialize_database,
+    make_session_factory,
+    persist_drift_report,
+    persist_medallion_layers,
+    persist_predictions,
+    redacted_database_url,
+)
 from .preprocessing import clean_raw
 from .serving import load_bundle, predict_proba_abandon
 from .training import prepare_training_frame, train_model
@@ -20,6 +29,53 @@ app = typer.Typer(help="Industrialized commands for the decrochage project.")
 
 def _read_csv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, encoding="utf-8-sig")
+
+
+@app.command("init-db")
+def init_db(
+    database_url: Annotated[
+        str | None,
+        typer.Option(
+            "--database-url",
+            help=f"SQLAlchemy database URL. Defaults to ${DATABASE_URL_ENV} or local SQLite.",
+        ),
+    ] = None,
+) -> None:
+    """Create database tables used by the medallion architecture."""
+    initialize_database(database_url)
+    typer.echo(
+        json.dumps(
+            {"database_url": redacted_database_url(database_url), "status": "ready"},
+            indent=2,
+        )
+    )
+
+
+@app.command("medallion-load")
+def medallion_load(
+    students: Annotated[Path, typer.Argument(help="Raw student CSV path")],
+    catalogue: Annotated[Path, typer.Argument(help="Catalogue CSV path")],
+    database_url: Annotated[
+        str | None,
+        typer.Option(
+            "--database-url",
+            help=f"SQLAlchemy database URL. Defaults to ${DATABASE_URL_ENV} or local SQLite.",
+        ),
+    ] = None,
+) -> None:
+    """Persist CSV inputs into Bronze, Silver and Gold database layers."""
+    initialize_database(database_url)
+    raw_df = _read_csv(students)
+    catalogue_df = _read_csv(catalogue)
+    with make_session_factory(database_url).begin() as session:
+        result = persist_medallion_layers(
+            session,
+            raw_df,
+            catalogue_df,
+            source_name="csv",
+            source_uri=f"{students}:{catalogue}",
+        )
+    typer.echo(json.dumps(result.__dict__, indent=2, ensure_ascii=False))
 
 
 @app.command("check-data")
@@ -70,6 +126,21 @@ def predict(
         Path,
         typer.Option("--output", "-o", help="Output predictions CSV path"),
     ] = Path("reports/predictions.csv"),
+    persist_db: Annotated[
+        bool,
+        typer.Option("--persist-db", help="Persist predictions into the Gold database table"),
+    ] = False,
+    batch_id: Annotated[
+        str | None,
+        typer.Option("--batch-id", help="Existing ingestion batch id for persisted predictions"),
+    ] = None,
+    database_url: Annotated[
+        str | None,
+        typer.Option(
+            "--database-url",
+            help=f"SQLAlchemy database URL. Defaults to ${DATABASE_URL_ENV} or local SQLite.",
+        ),
+    ] = None,
 ) -> None:
     """Score raw student records and write predictions."""
     bundle = load_bundle(model)
@@ -77,7 +148,19 @@ def predict(
     scored = predict_proba_abandon(bundle, raw_df)
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     scored.to_csv(output_csv, index=False)
-    typer.echo(str(output_csv))
+    payload: dict[str, str | int] = {"predictions_csv": str(output_csv)}
+    if persist_db:
+        if batch_id is None:
+            raise typer.BadParameter("--batch-id is required when --persist-db is enabled")
+        initialize_database(database_url)
+        with make_session_factory(database_url).begin() as session:
+            try:
+                payload["rows_persisted"] = persist_predictions(
+                    session, batch_id, raw_df, scored, bundle
+                )
+            except ValueError as exc:
+                raise typer.BadParameter(str(exc)) from exc
+    typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
 @app.command("drift-report")
@@ -88,13 +171,38 @@ def drift_report(
         Path,
         typer.Option("--output", "-o", help="Output JSON report path"),
     ] = Path("reports/drift_report.json"),
+    persist_db: Annotated[
+        bool,
+        typer.Option("--persist-db", help="Persist the drift report into the Gold database table"),
+    ] = False,
+    batch_id: Annotated[
+        str | None,
+        typer.Option("--batch-id", help="Existing ingestion batch id for persisted drift report"),
+    ] = None,
+    database_url: Annotated[
+        str | None,
+        typer.Option(
+            "--database-url",
+            help=f"SQLAlchemy database URL. Defaults to ${DATABASE_URL_ENV} or local SQLite.",
+        ),
+    ] = None,
 ) -> None:
     """Build a numeric PSI drift report."""
     reference = clean_raw(_read_csv(reference_csv))
     current = clean_raw(_read_csv(current_csv))
     report = build_drift_report(reference, current)
     path = write_drift_report(report, output)
-    typer.echo(str(path))
+    payload: dict[str, str | int] = {"drift_report": str(path)}
+    if persist_db:
+        if batch_id is None:
+            raise typer.BadParameter("--batch-id is required when --persist-db is enabled")
+        initialize_database(database_url)
+        with make_session_factory(database_url).begin() as session:
+            try:
+                payload["drift_report_id"] = persist_drift_report(session, batch_id, report)
+            except ValueError as exc:
+                raise typer.BadParameter(str(exc)) from exc
+    typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
 @app.command("serve")
