@@ -23,8 +23,8 @@ Les figures sont dans ../artifacts/figures/ (générées par le notebook).
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Nom Prénom** · *jj/mm/2026* · v1.0
-Python 3.13 · scikit-learn · notebook unique C1→C9
+**Staudt Michael** · *09/07/2026* · v1.1
+Python 3.13 · scikit-learn · FastAPI · CLI · notebook + package C1→C9
 
 <!--
 [0:30] Se présenter, annoncer le sujet en une phrase :
@@ -44,7 +44,7 @@ Annoncer la durée et qu'on prendra les questions à la fin.
 4. **Préparation** & anti-fuite
 5. **Modèle** : choix, entraînement, seuil
 6. **Résultats** & explicabilité
-7. **Industrialisation** : serving, architecture, MLOps
+7. **Industrialisation** : CLI, API, Docker, CI, monitoring
 8. **Limites & recommandations**
 
 <!--
@@ -203,15 +203,17 @@ gain d'AUC ici, et moins explicable.
 
 ## 8. Entraînement & validation — C5
 
-- **Split stratifié** train/test (1 ligne = 1 étudiant → pas de split groupé).
+- **Split stratifié** train / validation / test (test jamais utilisé pour choisir le seuil).
 - **Tuning** de la régularisation `C` par validation croisée stratifiée (scoring AUC).
 - **Déséquilibre** (~28 %) : `class_weight="balanced"` (pas de sur-échantillonnage agressif).
-- **AUC CV ≈ AUC test** → pas de surapprentissage.
+- **Seuil métier** choisi sur validation, puis évalué sur test hold-out.
+- **AUC CV ≈ AUC test** → pas de surapprentissage visible.
 
 <!--
 [1:30] Rassurer sur la robustesse : le fait que l'AUC en validation croisée
 égale l'AUC sur le test hold-out prouve qu'on ne surapprend pas. Expliquer
 pourquoi pondération plutôt que SMOTE : préserve la calibration des probabilités.
+Point important : le test final n'a pas servi à choisir le seuil.
 -->
 
 ---
@@ -221,12 +223,12 @@ pourquoi pondération plutôt que SMOTE : préserve la calibration des probabili
 ![w:600](../artifacts/figures/seuil_cout.png)
 
 - **Manquer un décrocheur (FN)** coûte plus cher qu'une alerte inutile (FP).
-- Ratio **FN:FP = 5:1** (hypothèse métier explicite) → seuil ≈ **0,31**.
-- Résultat : **rappel 96 %** (on rate très peu de décrocheurs).
+- Ratio **FN:FP = 5:1** (hypothèse métier explicite) → seuil ≈ **0,30** sur validation.
+- Résultat test : **rappel 95,9 %** (on rate très peu de décrocheurs), précision **63,5 %**.
 
 <!--
 [2:00] C'est un slide qui impressionne : montrer qu'on ne prend pas 0,5 par
-défaut mais qu'on OPTIMISE un coût métier. Assumer que le ratio 5:1 est une
+défaut mais qu'on OPTIMISE un coût métier sur validation. Assumer que le ratio 5:1 est une
 hypothèse à valider avec la direction. Lien direct avec l'objectif : ne pas
 laisser des étudiants décrocher.
 -->
@@ -287,33 +289,35 @@ JAMAIS pour prédire abandon.
 ## 13. Implémentation & service — C6
 
 - **Bundle sérialisé** (joblib) : Pipeline + features + seuil + catalogue + métadonnées.
-- Classes dans un **module** → rechargeable hors notebook.
-- **Contrat** : `predict(df_brut)` → `proba_abandon` + `alerte`.
-- Intégration : batch hebdomadaire SI scolarité / LMS → tableau de bord référents.
+- Package `decrochage` : `training.py`, `serving.py`, `api.py`, `cli.py`, `monitoring.py`.
+- **Contrats industrialisés** : CLI batch, API FastAPI `/predict`, bundle rechargeable hors notebook.
+- **Qualité** : tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
+- Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
 
 <!--
-[1:30] Montrer qu'on va « du notebook au service » : un modèle qu'on peut
-recharger et appeler sur des données brutes, avec un contrat d'entrée/sortie
-clair. Le piège évité : les classes custom doivent être importables (pas dans
-__main__) sinon le modèle ne se recharge pas.
+[1:30] Montrer qu'on va « du notebook au service » : le notebook explique la
+démarche, le package exécute la chaîne réutilisable. Mentionner les commandes :
+decrochage train, predict, serve, drift-report. Le piège évité : classes custom
+importables hors __main__, donc bundle rechargeable en API/CLI.
 -->
 
 ---
 
 ## 14. Architecture cible & contraintes — C7
 
-**Ingestion → Préparation (anti-fuite) → Inférence → Restitution → Monitoring**
+**Ingestion → Préparation anti-fuite → Entraînement/Scoring → API/CLI → Restitution → Monitoring**
 
 | Contrainte | Réponse |
 |---|---|
-| Technique | batch hebdo, modèle léger |
+| Technique | batch hebdo + API FastAPI, modèle léger |
 | RGPD | décision humaine, minimisation |
 | Éco-conception | modèle linéaire sobre |
 | Organisationnelle | explicabilité → adoption |
+| Exploitation | Docker + CI + tests + rapport PSI |
 
 <!--
 [1:30] Dessiner la chaîne à l'oral (ou montrer le schéma ASCII de
-ARCHITECTURE_PROJET.md). Point clé : la DÉCISION HUMAINE est explicitement dans
+docs/architecture.md). Point clé : la DÉCISION HUMAINE est explicitement dans
 l'architecture (à la restitution). Citer les acteurs : réussite étudiante, DPO,
 DSI, référents.
 -->
@@ -322,10 +326,12 @@ DSI, référents.
 
 ## 15. Amélioration continue (MLOps) — C9
 
-- **Monitoring** : drift (PSI/KS), performance (AUC), équité, complétude — avec
+- **Monitoring exécutable** : `decrochage drift-report` calcule le drift PSI.
+- **Suivi** : drift, performance (AUC), équité, complétude — avec
   **seuils d'alerte chiffrés**.
 - **Ré-entraînement** : annuel (nouvelle promotion) + événementiel (drift).
 - **Versioning** : données + modèle + métriques dans le bundle.
+- **Gouvernance** : model card, threat model, validation CI avant livraison.
 - **A/B test** pour mesurer l'impact **causal** de l'accompagnement.
 
 <!--
@@ -355,9 +361,9 @@ sur données réelles. »
 ## 17. Conclusion — une démarche C1→C9
 
 - **Rigueur anti-fuite** (3 pièges neutralisés + garde-fou).
-- **Modèle explicable** performant (AUC 0,95, rappel 96 %).
+- **Modèle explicable** performant (AUC 0,95, rappel 95,9 %).
 - **Seuil calibré** sur le coût métier.
-- **Industrialisable** (serving + architecture + MLOps).
+- **Industrialisation légère livrée** (CLI + API + Docker + CI + monitoring).
 - **Éthique et conforme** by design.
 
 **Merci — vos questions ?**
@@ -376,9 +382,9 @@ les questions avec assurance.
 - **Fuites ?** → 3 pièges + `assert_no_leakage` + périmètre codé.
 - **AUC 0,95 = fuite ?** → non : verrou + données synthétiques ; à revalider.
 - **Pourquoi LogReg et pas XGBoost ?** → même AUC, plus explicable/sobre.
-- **Choix du seuil ?** → minimisation du coût métier (FN >> FP).
+- **Choix du seuil ?** → minimisation du coût métier sur validation (FN >> FP).
 - **Équité / RGPD ?** → audit sous-groupes + décision humaine + minimisation.
-- **Drift en production ?** → monitoring PSI/KS + ré-entraînement.
+- **Drift en production ?** → `decrochage drift-report` + seuils PSI + ré-entraînement.
 
 <!--
 Slide de secours, à ne PAS présenter : à garder sous la main pendant les 30 min
