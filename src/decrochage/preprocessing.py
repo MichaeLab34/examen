@@ -36,8 +36,8 @@ def parse_number_fr(value) -> float:
     s = str(value).strip()
     if s == "" or s.lower() in {"nan", "none", "null"}:
         return np.nan
-    s = _NUM_CLEAN_RE.sub("", s)     # retire %, espaces, « km »
-    s = s.replace(",", ".")          # virgule décimale FR → point
+    s = _NUM_CLEAN_RE.sub("", s)  # retire %, espaces, « km »
+    s = s.replace(",", ".")  # virgule décimale FR → point
     try:
         return float(s)
     except ValueError:
@@ -56,13 +56,6 @@ def parse_numeric_columns(df: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
 # Parsing des dates multi-formats
 # --------------------------------------------------------------------------- #
 
-# Formats explicites rencontrés : AAAA-MM-JJ, JJ/MM/AAAA, « 02 Sep 2024 »
-_FR_MONTHS = {
-    "jan": "01", "fev": "02", "feb": "02", "mar": "03", "avr": "04", "apr": "04",
-    "mai": "05", "may": "05", "jun": "06", "jui": "07", "jul": "07", "aou": "08",
-    "aug": "08", "sep": "09", "oct": "10", "nov": "11", "dec": "12",
-}
-
 
 def parse_date_multi(value) -> pd.Timestamp:
     """Parse une date en essayant plusieurs formats ; NaT si échec."""
@@ -71,11 +64,13 @@ def parse_date_multi(value) -> pd.Timestamp:
     s = str(value).strip()
     if s == "":
         return pd.NaT
-    # pandas gère la majorité (ISO, JJ/MM/AAAA avec dayfirst, « 02 Sep 2024 »)
-    for dayfirst in (False, True):
-        dt = pd.to_datetime(s, dayfirst=dayfirst, errors="coerce")
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d %b %Y"):
+        dt = pd.to_datetime(s, format=fmt, errors="coerce")
         if pd.notna(dt):
             return dt
+    dt = pd.to_datetime(s, dayfirst=True, errors="coerce")
+    if pd.notna(dt):
+        return dt
     return pd.NaT
 
 
@@ -83,33 +78,67 @@ def parse_date_multi(value) -> pd.Timestamp:
 # Normalisation des catégorielles
 # --------------------------------------------------------------------------- #
 
+
 def _strip_lower(s) -> str:
     return str(s).strip().lower()
 
 
 _SEXE_MAP = {
-    "f": "F", "femme": "F", "femelle": "F",
-    "m": "M", "h": "M", "homme": "M",
-    "autre": "Autre", "other": "Autre", "nb": "Autre",
+    "f": "F",
+    "femme": "F",
+    "femelle": "F",
+    "m": "M",
+    "h": "M",
+    "homme": "M",
+    "autre": "Autre",
+    "other": "Autre",
+    "nb": "Autre",
 }
 
 _BAC_MAP = {
-    "general": "general", "generale": "general", "général": "general",
-    "générale": "general", "gen": "general", "g": "general",
-    "techno": "techno", "technologique": "techno", "techn": "techno", "t": "techno",
-    "pro": "pro", "professionnel": "pro", "professionnelle": "pro", "p": "pro",
+    "general": "general",
+    "generale": "general",
+    "général": "general",
+    "générale": "general",
+    "gen": "general",
+    "g": "general",
+    "techno": "techno",
+    "technologique": "techno",
+    "techn": "techno",
+    "t": "techno",
+    "pro": "pro",
+    "professionnel": "pro",
+    "professionnelle": "pro",
+    "p": "pro",
 }
 
 _MENTION_MAP = {
-    "passable": "passable", "p": "passable", "sans mention": "passable",
-    "ab": "AB", "assez bien": "AB",
-    "b": "B", "bien": "B",
-    "tb": "TB", "tres bien": "TB", "très bien": "TB",
+    "passable": "passable",
+    "p": "passable",
+    "sans mention": "passable",
+    "ab": "AB",
+    "assez bien": "AB",
+    "b": "B",
+    "bien": "B",
+    "tb": "TB",
+    "tres bien": "TB",
+    "très bien": "TB",
 }
 
 _BOURSIER_MAP = {
-    "oui": 1, "o": 1, "yes": 1, "y": 1, "1": 1, "true": 1, "vrai": 1,
-    "non": 0, "n": 0, "no": 0, "0": 0, "false": 0, "faux": 0,
+    "oui": 1,
+    "o": 1,
+    "yes": 1,
+    "y": 1,
+    "1": 1,
+    "true": 1,
+    "vrai": 1,
+    "non": 0,
+    "n": 0,
+    "no": 0,
+    "0": 0,
+    "false": 0,
+    "faux": 0,
 }
 
 
@@ -128,14 +157,19 @@ def normalize_categoricals(df: pd.DataFrame) -> pd.DataFrame:
         df["bac_type"] = df["bac_type"].map(lambda x: _BAC_MAP.get(_strip_lower(x), np.nan))
 
     if "mention_bac" in df.columns:
-        df["mention_bac"] = df["mention_bac"].map(lambda x: _MENTION_MAP.get(_strip_lower(x), np.nan))
+        df["mention_bac"] = df["mention_bac"].map(
+            lambda x: _MENTION_MAP.get(_strip_lower(x), np.nan)
+        )
 
     if "boursier" in df.columns:
         df["boursier"] = df["boursier"].map(lambda x: _BOURSIER_MAP.get(_strip_lower(x), np.nan))
 
     if "etablissement_origine" in df.columns:
         df["etablissement_origine"] = (
-            df["etablissement_origine"].astype(str).str.strip().str.lower()
+            df["etablissement_origine"]
+            .astype(str)
+            .str.strip()
+            .str.lower()
             .replace({"nan": np.nan, "": np.nan})
         )
 

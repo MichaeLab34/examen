@@ -1,0 +1,11 @@
+.git
+.github
+.ruff_cache
+.venv
+__pycache__
+*.pyc
+artifacts/figures
+data/processed
+notebooks/.ipynb_checkpoints
+reports/*.pptx
+tmp

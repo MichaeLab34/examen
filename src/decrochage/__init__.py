@@ -8,6 +8,9 @@ Regroupe le code réutilisable et reproductible hors notebook :
   leurres).
 - `serving` : contrat d'entrée/sortie et fonction `predict_proba_abandon` pour
   un service de prédiction (compétence C6).
+- `training` : entraînement réutilisable avec seuil choisi sur validation.
+- `monitoring` : rapport de dérive PSI pour l'amélioration continue.
+- `api` / `cli` : surfaces d'exploitation hors notebook.
 
 Le notebook de restitution reste la source de vérité de la démarche ; ce package
 en isole les fonctions déterministes pour garantir la reproductibilité et pour
@@ -17,4 +20,4 @@ classes/fonctions ne vivent pas dans `__main__`).
 
 from __future__ import annotations
 
-__all__ = ["preprocessing", "features", "serving"]
+__all__ = ["preprocessing", "features", "serving", "training", "monitoring", "api", "cli"]

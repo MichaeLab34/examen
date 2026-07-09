@@ -43,7 +43,14 @@ examen/
 │   ├── __init__.py
 │   ├── preprocessing.py        # parsing (%, virgules, km), dates, normalisation, dédoublonnage
 │   ├── features.py             # périmètre anti-fuite + jointure catalogue + feature engineering
-│   └── serving.py              # ModelBundle (joblib) + contrat predict (C6)
+│   ├── training.py             # entraînement train/validation/test + seuil métier
+│   ├── serving.py              # ModelBundle (joblib) + contrat predict (C6)
+│   ├── monitoring.py           # drift PSI + rapport JSON (C9)
+│   ├── api.py                  # FastAPI : /health, /ready, /predict
+│   └── cli.py                  # check-data, train, predict, drift-report, serve
+├── tests/                      # contrats package/API + non-régression anti-fuite
+├── docs/                       # model card, industrialisation, monitoring, menaces
+├── Dockerfile                  # image de serving non-root
 ├── artifacts/
 │   ├── models/                 # model_bundle.joblib
 │   └── figures/                # PNG exportés par le notebook
@@ -95,9 +102,9 @@ data/raw/*.csv
    → enrich_with_catalogue (jointure filiere)
    → add_engineered_features (taux de rendu, intensité LMS, ...)
    → scoring_feature_columns + assert_no_leakage (verrou anti-fuite)
-   → split stratifié train/test
+   → split stratifié train/validation/test
    → Pipeline(impute+encode+scale+LogReg), GridSearchCV (AUC)
-   → seuil par minimisation du coût métier (FN:FP)
+   → seuil par minimisation du coût métier sur validation (FN:FP)
    → sérialisation ModelBundle (joblib)
 ```
 
@@ -108,6 +115,7 @@ DataFrame brut (SI+LMS)
    → serving.prepare_features (clean_raw + jointure catalogue embarqué + features)
    → bundle.pipeline.predict_proba
    → proba_abandon + alerte (seuil)
+   → CLI batch ou API FastAPI
    → restitution priorisée aux référents (décision humaine)
 ```
 
@@ -117,7 +125,11 @@ DataFrame brut (SI+LMS)
 |---|---|---|---|
 | `decrochage.preprocessing` | Nettoyage déterministe des données brutes | DataFrame brut | DataFrame typé/normalisé |
 | `decrochage.features` | Périmètre de scoring anti-fuite, jointure catalogue, feature engineering | DataFrame nettoyé | Features + garde-fous |
+| `decrochage.training` | Entraînement industrialisé + choix du seuil sur validation | CSV bruts + catalogue | `ModelBundle`, métriques test |
 | `decrochage.serving` | Bundle sérialisable + contrat de prédiction | Bundle, DataFrame brut | `proba_abandon`, `alerte` |
+| `decrochage.api` | Service HTTP contractuel | JSON records bruts | JSON prédictions |
+| `decrochage.cli` | Exploitation batch | CSV / bundle | rapports, prédictions, service |
+| `decrochage.monitoring` | Détection de dérive PSI | référence + courant | rapport JSON |
 | `notebooks/…` | Restitution certifiante bout-en-bout (C1→C9) | Données + package | Analyses, modèle, figures |
 
 ## Contrats d'entrée / sortie
@@ -127,6 +139,8 @@ DataFrame brut (SI+LMS)
 | Données étudiants | CSV brut (33 colonnes) | SI scolarité / LMS | `preprocessing.clean_raw` | dictionnaire de données, bornes |
 | Catalogue formations | CSV (7 colonnes) | Référentiel filières | `features.enrich_with_catalogue` | jointure `filiere` (100 %) |
 | Score de risque | DataFrame `{proba_abandon: float∈[0,1], alerte: 0/1}` | `serving.predict_proba_abandon` | Tableau de bord référents | seuil documenté |
+| API de prédiction | JSON `{records: [...]}` | FastAPI `/predict` | SI / tableau de bord | Pydantic + readiness |
+| Rapport drift | JSON PSI par feature | `monitoring.build_drift_report` | Data scientist / DPO | seuils watch/alert |
 
 ## Stockage et données
 
@@ -155,8 +169,11 @@ DataFrame brut (SI+LMS)
 | Data / ML | `pandas`, `numpy`, `scikit-learn`, `xgboost` | Préparation, modèles, métriques |
 | Explicabilité | `shap`, `permutation_importance` | Facteurs de risque |
 | Sérialisation | `joblib` | Bundle modèle |
+| API / CLI | `FastAPI`, `Typer`, `Pydantic` | Exploitation hors notebook |
+| Monitoring | PSI pandas/numpy | Détection dérive données |
+| Déploiement | Docker | API locale conteneurisée |
 | Restitution | `jupyter`, `matplotlib`, `seaborn` | Notebook certifiant, visualisations |
-| Qualité | `ruff`, `black` | Lint, formatage |
+| Qualité | `ruff`, `black`, `pytest`, GitHub Actions | Lint, formatage, tests, CI |
 
 ## Points d'attention
 

@@ -23,14 +23,17 @@ import numpy as np
 import pandas as pd
 
 # --- Cibles ---
-TARGET_CLF = "abandon"          # cible principale : classification binaire (0/1)
-TARGET_REG = "moyenne_finale"   # cible secondaire : régression (/20)
+TARGET_CLF = "abandon"  # cible principale : classification binaire (0/1)
+TARGET_REG = "moyenne_finale"  # cible secondaire : régression (/20)
 
 # --- Colonnes à exclure du périmètre de scoring (classification `abandon`) ---
 ID_COLS = ["student_id", "id_dossier"]
-CONSTANT_COLS = ["annee_universitaire", "niveau"]  # constantes (2024-2025 ; L1) → aucune information
+CONSTANT_COLS = [
+    "annee_universitaire",
+    "niveau",
+]  # constantes (2024-2025 ; L1) → aucune information
 LEURRE_COLS = ["groupe_td", "couleur_carte_etudiante", "jour_inscription"]
-LEAKAGE_TARGET_COLS = ["moyenne_finale"]                      # fuite de données
+LEAKAGE_TARGET_COLS = ["moyenne_finale"]  # fuite de données
 LEAKAGE_TEMPORAL_COLS = ["moyenne_partiels_s1", "nb_ue_validees_s1"]  # fuite temporelle
 
 # Dates brutes : non utilisables telles quelles (texte / Timestamp) ; on en dérive
@@ -78,7 +81,9 @@ def assert_no_leakage(feature_cols: list[str]) -> None:
         ID_COLS + LEAKAGE_TARGET_COLS + LEAKAGE_TEMPORAL_COLS + [TARGET_CLF, TARGET_REG]
     )
     intruders = forbidden & set(feature_cols)
-    assert not intruders, f"Fuite de données : colonnes interdites présentes dans les features : {sorted(intruders)}"
+    assert (
+        not intruders
+    ), f"Fuite de données : colonnes interdites présentes dans les features : {sorted(intruders)}"
 
 
 def add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:

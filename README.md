@@ -25,7 +25,13 @@ examen/
 ├── src/decrochage/            # code réutilisable & reproductible
 │   ├── preprocessing.py        # parsing données sales, normalisation, dédoublonnage
 │   ├── features.py             # périmètre de scoring anti-fuite + feature engineering
-│   └── serving.py              # bundle modèle + fonction predict (contrat C6)
+│   ├── training.py             # entraînement industrialisé train/validation/test
+│   ├── serving.py              # bundle modèle + fonction predict (contrat C6)
+│   ├── monitoring.py           # rapport de dérive PSI (C9)
+│   ├── api.py                  # API FastAPI /health /ready /predict
+│   └── cli.py                  # commandes batch et service
+├── docs/                       # model card, industrialisation, monitoring, menaces
+├── tests/                      # tests unitaires et contrats API/serving
 ├── artifacts/
 │   ├── models/                 # bundle sérialisé (joblib)
 │   └── figures/                # graphiques exportés
@@ -47,10 +53,22 @@ examen/
 
 ```powershell
 uv sync --group notebook                 # installe l'environnement (Python 3.13)
+uv sync --group dev                       # installe les outils de qualité et tests
 uv run jupyter lab                        # ouvre le notebook
 uv run jupyter nbconvert --to notebook --execute --inplace notebooks/decrochage_etudiant.ipynb
-uv run ruff check . ; uv run black --check .
+uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
+uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
+uv run decrochage serve                   # démarre l'API FastAPI
+uv run ruff check . ; uv run black --check . ; uv run pytest
 ```
+
+## Industrialisation
+
+Le notebook reste le livrable certifiant. Le chemin production léger est porté
+par le package : entraînement avec seuil choisi sur validation, bundle joblib,
+CLI, API FastAPI, Dockerfile, CI GitHub Actions et rapport de dérive PSI. Voir
+`docs/industrialisation.md`, `docs/model_card.md`, `docs/monitoring_plan.md` et
+`docs/threat_model.md`.
 
 ## Données
 
