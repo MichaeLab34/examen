@@ -19,7 +19,7 @@ examen/
 ├── README.md
 ├── data/
 │   ├── raw/                    # données brutes fournies (3 CSV) — livrable
-│   └── processed/              # données nettoyées régénérées par le notebook
+│   └── processed/              # espace transitoire ignoré ; la cible est la BDD
 ├── notebooks/
 │   └── decrochage_etudiant.ipynb   # notebook certifiant (plan imposé 0→15)
 ├── src/decrochage/            # code réutilisable & reproductible

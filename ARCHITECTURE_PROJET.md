@@ -36,7 +36,7 @@ examen/
 ├── README.md
 ├── data/
 │   ├── raw/                    # 3 CSV fournis (immuables, livrables)
-│   └── processed/              # jeu nettoyé régénéré par le notebook
+│   └── processed/              # espace transitoire ignoré ; la cible est la BDD
 ├── notebooks/
 │   └── decrochage_etudiant.ipynb   # notebook certifiant (plan imposé 0→15)
 ├── src/decrochage/            # package réutilisable
@@ -147,8 +147,8 @@ DataFrame brut (SI+LMS)
 | Stockage | Rôle | Données | Rétention | Sensibilité |
 |---|---|---|---|---|
 | `data/raw/` | Données sources | 3 CSV fournis | Année universitaire | Sensible (scolaire) |
-| `data/processed/` | Jeu nettoyé | CSV régénérable | Éphémère | Sensible |
-| Postgres / `artifacts/decrochage.db` | Médaillon BDD | Bronze brut restreint ; Silver/Gold pseudonymisés | `DECROCHAGE_RETENTION_DAYS` | Sensible |
+| `data/processed/` | Espace transitoire local | Exports ponctuels ignorés par Git | À supprimer après usage | Sensible |
+| Postgres / `artifacts/decrochage.db` | Médaillon BDD | Bronze brut restreint ; Silver/Gold pseudonymisés | `DECROCHAGE_RETENTION_DAYS` | Sensible, source opérationnelle |
 | `artifacts/models/` | Modèle sérialisé | `model_bundle.joblib` | Versionné | Interne |
 
 ## Contraintes (C7)
