@@ -23,8 +23,8 @@ Les figures sont dans ../artifacts/figures/ (générées par le notebook).
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Staudt Michael** · *09/07/2026* · v1.1
-Python 3.13 · scikit-learn · FastAPI · CLI · notebook + package C1→C9
+**Staudt Michael** · *10/07/2026* · v1.2
+Python 3.13 · scikit-learn · FastAPI · CLI · Postgres · notebook + package C1→C9
 
 <!--
 [0:30] Se présenter, annoncer le sujet en une phrase :
@@ -44,7 +44,7 @@ Annoncer la durée et qu'on prendra les questions à la fin.
 4. **Préparation** & anti-fuite
 5. **Modèle** : choix, entraînement, seuil
 6. **Résultats** & explicabilité
-7. **Industrialisation** : CLI, API, Docker, CI, monitoring
+7. **Industrialisation** : BDD médaillon, CLI, API, Docker, CI, monitoring
 8. **Limites & recommandations**
 
 <!--
@@ -130,9 +130,9 @@ colonne interdite entre dans le modèle. »
 - **Effet de marquage** : étiqueter « à risque » n'est pas neutre.
 - **RGPD** : finalité limitée (aide ≠ sanction), information, **décision humaine**
   (pas d'automatisation — art. 22).
-- **Sprint 1 appliqué** : Bronze brut restreint, identifiants directs
-  pseudonymisés HMAC à partir de Silver, rétention/purge, audit log
-  `privacy_audit_log`, secret hors Git.
+- **Sprint 1 appliqué** : Bronze brut restreint, Silver pseudonymisé HMAC,
+  Gold sans identifiants directs, rétention/purge et audit `privacy_audit_log`.
+- **Secrets hors Git** : `.env` local ignoré, `.env.example` versionné.
 
 **Garde-fous** : explicabilité · audit d'équité par sous-groupes · usage encadré ·
 minimisation · pseudonymisation · accountability.
@@ -148,22 +148,24 @@ un biais → d'où l'audit d'équité que je montre plus loin.
 
 ## 5. Préparation des données — C3
 
-Nettoyage **déterministe** et reproductible (module `preprocessing.py`) :
+Chaîne **déterministe** et reproductible :
 
 - **dédoublonnage** (40 doublons → 5 200 lignes) ;
 - **nombres en texte** → float : « 61,8 » · « 61.4% » · « 14.4 km » ;
 - **dates multi-formats** → parsées ;
 - **encodages** harmonisés (`sexe`, `bac_type`, `mention_bac`, `boursier`…).
 
-**Feature engineering** (mi-S1, sans fuite) : taux de rendu, intensité LMS,
-`commentaire_present`, ancienneté d'inscription.
-**Imputation/encodage DANS la Pipeline** → fit **train seul** (anti-fuite).
+**Silver** = données nettoyées et pseudonymisées.  
+**Gold** = source unique de modélisation : features mi-S1, labels et split.
+
+Le notebook construit `X`, `y_clf` et `y_reg` **uniquement depuis le Gold dataset**.
 
 <!--
-[2:00] Insister sur 2 idées défendables :
+[2:00] Insister sur 3 idées défendables :
 1. Le nettoyage est dans un MODULE → rejoué à l'identique en production.
-2. On impute DANS la pipeline (pas avant le split) sinon fuite du test.
-Montrer 1-2 exemples concrets de valeurs sales (« 14.4 km ») — ça marque.
+2. Silver pseudonymise, Gold sert réellement à entraîner/scorer.
+3. On impute DANS la pipeline (pas avant le split) sinon fuite du test.
+Montrer 1-2 exemples concrets de valeurs sales (« 14.4 km »).
 -->
 
 ---
@@ -292,7 +294,8 @@ JAMAIS pour prédire abandon.
 ## 13. Implémentation & service — C6
 
 - **Bundle sérialisé** (joblib) : Pipeline + features + seuil + catalogue + métadonnées.
-- Package `decrochage` : `training.py`, `serving.py`, `api.py`, `cli.py`, `monitoring.py`.
+- Package `decrochage` : `training.py`, `serving.py`, `api.py`, `cli.py`,
+  `persistence.py`, `monitoring.py`.
 - **Contrats industrialisés** : CLI batch, API FastAPI `/predict`, bundle rechargeable hors notebook.
 - **Qualité** : tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
 - Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
@@ -306,36 +309,58 @@ importables hors __main__, donc bundle rechargeable en API/CLI.
 
 ---
 
-## 14. Architecture cible & contraintes — C7
+## 14. Persistance SQL & architecture médaillon — C7
 
-**Ingestion → Préparation anti-fuite → Entraînement/Scoring → API/CLI → Restitution → Monitoring**
+**Ingestion → Bronze → Silver → Gold → Entraînement/Scoring → API/CLI → Monitoring**
 
-| Contrainte | Réponse |
+| Couche | Rôle | Données personnelles |
+|---|---|---|
+| Bronze | lignes sources brutes, traçabilité | restreintes, purgées |
+| Silver | nettoyage + normalisation | IDs remplacés par HMAC |
+| Gold | features, split, scores, drift | pas d'identifiants directs |
+
+Stack locale production-like : **Postgres via Docker Compose**.  
+Fallback dev : SQLite local ignoré par Git.
+
+<!--
+[1:30] Faire le lien avec le Sprint 1 : Bronze reste brut parce que c'est la
+zone de preuve et de reprise, mais elle est restreinte. Silver pseudonymise.
+Gold est la seule source de modélisation et de scoring. Mentionner la commande :
+decrochage medallion-load.
+-->
+
+---
+
+## 15. Architecture cible & contraintes — C7
+
+| Contrainte | Réponse livrée |
 |---|---|
-| Technique | batch hebdo + API FastAPI, modèle léger |
+| Technique | batch CLI + API FastAPI, modèle léger |
 | RGPD | décision humaine, minimisation, HMAC, rétention |
 | Éco-conception | modèle linéaire sobre |
 | Organisationnelle | explicabilité → adoption |
 | Exploitation | Docker + CI + tests + rapport PSI |
 
+**Décision finale** : le score priorise l'accompagnement, il ne sanctionne pas.
+
 <!--
-[1:30] Dessiner la chaîne à l'oral (ou montrer le schéma ASCII de
-docs/architecture.md). Point clé : la DÉCISION HUMAINE est explicitement dans
-l'architecture (à la restitution). Citer les acteurs : réussite étudiante, DPO,
-DSI, référents.
+[1:30] Dessiner la chaîne à l'oral. Point clé : la DÉCISION HUMAINE est
+explicitement dans l'architecture. Citer les acteurs : réussite étudiante, DPO,
+DSI, référents pédagogiques.
 -->
 
 ---
 
-## 15. Amélioration continue (MLOps) — C9
+## 16. Amélioration continue (MLOps) — C9
 
 - **Monitoring exécutable** : `decrochage drift-report` calcule le drift PSI.
 - **Suivi** : drift, performance (AUC), équité, complétude — avec
   **seuils d'alerte chiffrés**.
+- **Persistance** : rapports dans `gold_drift_report`, scores dans `gold_prediction`.
 - **Ré-entraînement** : annuel (nouvelle promotion) + événementiel (drift).
 - **Versioning** : données + modèle + métriques dans le bundle.
 - **Gouvernance** : model card, threat model, validation CI avant livraison.
-- **A/B test** pour mesurer l'impact **causal** de l'accompagnement.
+- **Extension production** : exporter métriques vers Prometheus/Grafana après validation DSI.
 
 <!--
 [1:30] Montrer qu'on pense au CYCLE DE VIE, pas juste au modèle figé. Insister :
@@ -345,11 +370,12 @@ logique. Le A/B test est ce qui permettrait de PROUVER que ça marche vraiment.
 
 ---
 
-## 16. Limites & recommandations
+## 17. Limites & recommandations
 
 - **Données synthétiques** → AUC élevée à revalider sur données réelles.
 - **Corrélation ≠ causalité** → A/B test nécessaire avant conclusion business.
-- **Éthique** : surveiller l'équité en continu, cadrer avec le DPO.
+- **Production réelle** : DPO, DPIA/AIPD, RBAC DB, coffre de secrets, dashboards.
+- **Éthique** : surveiller l'équité en continu, documenter les recours.
 - Le score **priorise**, il ne **décide** pas.
 
 <!--
@@ -361,13 +387,13 @@ sur données réelles. »
 
 ---
 
-## 17. Conclusion — une démarche C1→C9
+## 18. Conclusion — une démarche C1→C9
 
 - **Rigueur anti-fuite** (3 pièges neutralisés + garde-fou).
 - **Modèle explicable** performant (AUC 0,95, rappel 95,9 %).
 - **Seuil calibré** sur le coût métier.
-- **Industrialisation légère livrée** (CLI + API + Docker + CI + monitoring).
-- **Éthique et conforme** by design.
+- **Industrialisation livrée** (BDD médaillon + CLI + API + Docker + CI + monitoring).
+- **RGPD documenté et implémenté** dès la persistance.
 
 **Merci — vos questions ?**
 
@@ -387,7 +413,8 @@ les questions avec assurance.
 - **Pourquoi LogReg et pas XGBoost ?** → même AUC, plus explicable/sobre.
 - **Choix du seuil ?** → minimisation du coût métier sur validation (FN >> FP).
 - **Équité / RGPD ?** → audit sous-groupes + décision humaine + minimisation.
-- **Drift en production ?** → `decrochage drift-report` + seuils PSI + ré-entraînement.
+- **Bronze contient du brut ?** → oui, zone restreinte de traçabilité ; Silver/Gold protègent l'usage.
+- **Drift en production ?** → `decrochage drift-report` + Gold SQL + seuils PSI + ré-entraînement.
 
 <!--
 Slide de secours, à ne PAS présenter : à garder sous la main pendant les 30 min
