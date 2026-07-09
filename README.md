@@ -60,6 +60,7 @@ uv run jupyter nbconvert --to notebook --execute --inplace notebooks/decrochage_
 uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 uv run decrochage init-db
 uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
+uv run decrochage purge-expired
 uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 uv run decrochage serve                   # démarre l'API FastAPI
 uv run ruff check . ; uv run black --check . ; uv run pytest
@@ -70,10 +71,13 @@ uv run ruff check . ; uv run black --check . ; uv run pytest
 Le notebook reste le livrable certifiant. Le chemin production léger est porté
 par le package : entraînement avec seuil choisi sur validation, bundle joblib,
 CLI, API FastAPI, persistance SQL en architecture médaillon, Dockerfile, CI
-GitHub Actions et rapport de dérive PSI. La base par défaut est
-`artifacts/decrochage.db` ; `DECROCHAGE_DATABASE_URL` permet de viser une autre
-base compatible SQLAlchemy. Cette base contient des données étudiantes et reste
-hors versionnement Git. Voir `docs/industrialisation.md`,
+GitHub Actions et rapport de dérive PSI. La stack Docker Compose fournit une
+base Postgres locale ; `DECROCHAGE_DATABASE_URL` permet de viser une autre base
+compatible SQLAlchemy. Toute persistance BDD pseudonymise les identifiants
+directs à partir de Silver par HMAC-SHA-256 via
+`DECROCHAGE_PSEUDONYMIZATION_SECRET`; Bronze reste brut et doit donc être
+restreint, audité et purgé. Voir
+`docs/industrialisation.md`, `docs/rgpd_accountability.md`,
 `docs/model_card.md`, `docs/monitoring_plan.md` et `docs/threat_model.md`.
 
 ## Données

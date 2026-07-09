@@ -176,6 +176,24 @@ def prepare_training_frame(raw_df: pd.DataFrame, catalogue: pd.DataFrame) -> pd.
     return F.add_engineered_features(df)
 
 
+def build_gold_dataset(
+    prepared_df: pd.DataFrame,
+    *,
+    random_state: int = 42,
+    allow_fallback: bool = False,
+) -> tuple[pd.DataFrame, list[str]]:
+    """Materialize the canonical Gold dataset used by model training."""
+    gold_dataset, feature_cols = F.build_gold_dataset(prepared_df, include_labels=True)
+    if F.TARGET_CLF not in gold_dataset.columns:
+        raise ValueError(f"{F.TARGET_CLF} is required to build a training Gold dataset")
+    gold_dataset["split_set"] = assign_split_labels(
+        gold_dataset[F.TARGET_CLF].astype(int),
+        random_state=random_state,
+        allow_fallback=allow_fallback,
+    )
+    return gold_dataset, feature_cols
+
+
 def train_model(
     raw_df: pd.DataFrame,
     catalogue: pd.DataFrame,
@@ -191,20 +209,20 @@ def train_model(
     - 20% final test, never used for hyperparameter or threshold selection.
     - 20% of remaining training data as validation for threshold selection.
     """
-    df = prepare_training_frame(raw_df, catalogue)
-    feature_cols = F.scoring_feature_columns(df)
-    F.assert_no_leakage(feature_cols)
-
-    X = df[feature_cols]
-    y = df[F.TARGET_CLF].astype(int)
-
-    train_idx, val_idx, test_idx = split_train_validation_test_indices(
-        y,
+    prepared = prepare_training_frame(raw_df, catalogue)
+    gold_dataset, feature_cols = build_gold_dataset(
+        prepared,
         random_state=random_state,
     )
-    X_train, y_train = X.loc[train_idx], y.loc[train_idx]
-    X_val, y_val = X.loc[val_idx], y.loc[val_idx]
-    X_test, y_test = X.loc[test_idx], y.loc[test_idx]
+
+    X = gold_dataset[feature_cols]
+    y = gold_dataset[F.TARGET_CLF].astype(int)
+    train_mask = gold_dataset["split_set"].eq("train")
+    val_mask = gold_dataset["split_set"].eq("validation")
+    test_mask = gold_dataset["split_set"].eq("test")
+    X_train, y_train = X.loc[train_mask], y.loc[train_mask]
+    X_val, y_val = X.loc[val_mask], y.loc[val_mask]
+    X_test, y_test = X.loc[test_mask], y.loc[test_mask]
 
     pipeline = Pipeline(
         [

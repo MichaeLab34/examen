@@ -130,9 +130,12 @@ colonne interdite entre dans le modèle. »
 - **Effet de marquage** : étiqueter « à risque » n'est pas neutre.
 - **RGPD** : finalité limitée (aide ≠ sanction), information, **décision humaine**
   (pas d'automatisation — art. 22).
+- **Sprint 1 appliqué** : Bronze brut restreint, identifiants directs
+  pseudonymisés HMAC à partir de Silver, rétention/purge, audit log
+  `privacy_audit_log`, secret hors Git.
 
 **Garde-fous** : explicabilité · audit d'équité par sous-groupes · usage encadré ·
-minimisation.
+minimisation · pseudonymisation · accountability.
 
 <!--
 [2:00] Montrer une vraie conscience éthique — c'est très regardé (C2 a un
@@ -310,7 +313,7 @@ importables hors __main__, donc bundle rechargeable en API/CLI.
 | Contrainte | Réponse |
 |---|---|
 | Technique | batch hebdo + API FastAPI, modèle léger |
-| RGPD | décision humaine, minimisation |
+| RGPD | décision humaine, minimisation, HMAC, rétention |
 | Éco-conception | modèle linéaire sobre |
 | Organisationnelle | explicabilité → adoption |
 | Exploitation | Docker + CI + tests + rapport PSI |

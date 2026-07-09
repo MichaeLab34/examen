@@ -11,6 +11,8 @@ from decrochage.persistence import (
     GoldDriftReport,
     GoldPrediction,
     GoldTrainingFeature,
+    IngestionBatch,
+    PrivacyAuditLog,
     SilverCatalogue,
     SilverStudent,
     initialize_database,
@@ -18,6 +20,8 @@ from decrochage.persistence import (
     persist_drift_report,
     persist_medallion_layers,
     persist_predictions,
+    pseudonymize_identifier,
+    purge_expired_batches,
     redacted_database_url,
 )
 from decrochage.serving import ModelBundle
@@ -68,6 +72,11 @@ def _catalogue() -> pd.DataFrame:
     )
 
 
+@pytest.fixture(autouse=True)
+def _pseudonymization_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DECROCHAGE_PSEUDONYMIZATION_SECRET", "unit-test-secret")
+
+
 def test_initialize_database_and_persist_medallion_layers(tmp_path: Path) -> None:
     url = _database_url(tmp_path)
     initialize_database(url)
@@ -84,6 +93,7 @@ def test_initialize_database_and_persist_medallion_layers(tmp_path: Path) -> Non
         assert session.query(SilverStudent).count() == 6
         assert session.query(SilverCatalogue).count() == 2
         assert session.query(GoldTrainingFeature).count() == 6
+        assert session.query(PrivacyAuditLog).filter_by(action="medallion_load").count() == 1
 
 
 def test_gold_features_exclude_leakage_columns(tmp_path: Path) -> None:
@@ -102,6 +112,28 @@ def test_gold_features_exclude_leakage_columns(tmp_path: Path) -> None:
     assert "nb_ue_validees_s1" not in features
     assert "student_id" not in features
     assert gold_row.split_set in {"train", "validation", "test"}
+
+
+def test_bronze_keeps_raw_identifiers_and_silver_gold_are_pseudonymized(
+    tmp_path: Path,
+) -> None:
+    url = _database_url(tmp_path)
+    initialize_database(url)
+
+    Session = make_session_factory(url)
+    with Session() as session:
+        result = persist_medallion_layers(session, _students(), _catalogue())
+        bronze_payload = json.loads(session.query(BronzeStudentRaw).first().payload_json)
+        silver_row = session.query(SilverStudent).first()
+        gold_row = session.query(GoldTrainingFeature).first()
+
+    expected_student = pseudonymize_identifier("stu-0")
+    assert bronze_payload["student_id"] == "stu-0"
+    assert bronze_payload["id_dossier"] == "dos-0"
+    assert silver_row.student_id == expected_student
+    assert silver_row.id_dossier == pseudonymize_identifier("dos-0")
+    assert gold_row.student_id == expected_student
+    assert result.rows_gold == 6
 
 
 def test_persist_predictions_and_drift_report(tmp_path: Path) -> None:
@@ -132,6 +164,9 @@ def test_persist_predictions_and_drift_report(tmp_path: Path) -> None:
         assert report_id > 0
         assert session.query(GoldPrediction).count() == 2
         assert session.query(GoldDriftReport).count() == 1
+        prediction_payload = json.loads(session.query(GoldPrediction).first().payload_json)
+        assert "stu-0" not in json.dumps(prediction_payload)
+        assert prediction_payload["input"]["student_id"] == pseudonymize_identifier("stu-0")
 
 
 def test_persist_predictions_rejects_unknown_batch(tmp_path: Path) -> None:
@@ -152,6 +187,19 @@ def test_database_url_is_redacted_for_display() -> None:
 
     assert "secret" not in safe_url
     assert "***" in safe_url
+
+
+def test_persisting_student_data_requires_pseudonymization_secret(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DECROCHAGE_PSEUDONYMIZATION_SECRET", raising=False)
+    url = _database_url(tmp_path)
+    initialize_database(url)
+
+    Session = make_session_factory(url)
+    with Session() as session:
+        with pytest.raises(ValueError, match="DECROCHAGE_PSEUDONYMIZATION_SECRET"):
+            persist_medallion_layers(session, _students(), _catalogue())
 
 
 def test_sqlite_memory_database_reuses_initialized_engine() -> None:
@@ -180,3 +228,25 @@ def test_unlabeled_batch_persists_bronze_and_silver_without_gold(tmp_path: Path)
         assert result.rows_gold == 0
         assert session.query(SilverStudent).count() == 6
         assert session.query(GoldTrainingFeature).count() == 0
+
+
+def test_purge_expired_batches_removes_sensitive_rows(tmp_path: Path) -> None:
+    url = _database_url(tmp_path)
+    initialize_database(url)
+
+    Session = make_session_factory(url)
+    with Session() as session:
+        persist_medallion_layers(
+            session,
+            _students(),
+            _catalogue(),
+            retention_days_value=-1,
+        )
+        purged = purge_expired_batches(session)
+
+        assert purged == 1
+        assert session.query(IngestionBatch).count() == 0
+        assert session.query(BronzeStudentRaw).count() == 0
+        assert session.query(SilverStudent).count() == 0
+        assert session.query(GoldTrainingFeature).count() == 0
+        assert session.query(PrivacyAuditLog).filter_by(action="retention_purge").count() == 1

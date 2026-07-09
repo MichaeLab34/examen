@@ -21,6 +21,7 @@ sanction, orient or label a student without human review.
 - Use outside L1 without revalidation.
 - Use after S1 if the feature availability window changes.
 - Use on real student data without DPO review and stakeholder information.
+- Export or publish row-level data without an anonymization study.
 
 ## Evaluation
 
@@ -38,4 +39,6 @@ support process before production deployment.
 
 Sensitive or proxy variables include `sexe`, `boursier` and
 `etablissement_origine`. Monitor subgroup recall and alert rates. Keep the final
-decision human, explainable and reversible.
+decision human, explainable and reversible. Direct identifiers are not model
+features; they are kept raw only in restricted Bronze and HMAC-pseudonymized
+from Silver onward.

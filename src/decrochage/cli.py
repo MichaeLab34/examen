@@ -18,11 +18,12 @@ from .persistence import (
     persist_drift_report,
     persist_medallion_layers,
     persist_predictions,
+    purge_expired_batches,
     redacted_database_url,
 )
 from .preprocessing import clean_raw
 from .serving import load_bundle, predict_proba_abandon
-from .training import prepare_training_frame, train_model
+from .training import build_gold_dataset, prepare_training_frame, train_model
 
 app = typer.Typer(help="Industrialized commands for the decrochage project.")
 
@@ -68,14 +69,35 @@ def medallion_load(
     raw_df = _read_csv(students)
     catalogue_df = _read_csv(catalogue)
     with make_session_factory(database_url).begin() as session:
-        result = persist_medallion_layers(
-            session,
-            raw_df,
-            catalogue_df,
-            source_name="csv",
-            source_uri=f"{students}:{catalogue}",
-        )
+        try:
+            result = persist_medallion_layers(
+                session,
+                raw_df,
+                catalogue_df,
+                source_name="csv",
+                source_uri=f"{students}:{catalogue}",
+                actor="cli",
+            )
+        except ValueError as exc:
+            raise typer.BadParameter(str(exc)) from exc
     typer.echo(json.dumps(result.__dict__, indent=2, ensure_ascii=False))
+
+
+@app.command("purge-expired")
+def purge_expired(
+    database_url: Annotated[
+        str | None,
+        typer.Option(
+            "--database-url",
+            help=f"SQLAlchemy database URL. Defaults to ${DATABASE_URL_ENV} or local SQLite.",
+        ),
+    ] = None,
+) -> None:
+    """Purge expired medallion batches according to the RGPD retention policy."""
+    initialize_database(database_url)
+    with make_session_factory(database_url).begin() as session:
+        purged_batches = purge_expired_batches(session, actor="cli")
+    typer.echo(json.dumps({"purged_batches": purged_batches}, indent=2, ensure_ascii=False))
 
 
 @app.command("check-data")
@@ -87,14 +109,14 @@ def check_data(
     raw_df = _read_csv(students)
     catalogue_df = _read_csv(catalogue)
     prepared = prepare_training_frame(raw_df, catalogue_df)
-    feature_cols = F.scoring_feature_columns(prepared)
-    F.assert_no_leakage(feature_cols)
+    gold_dataset, feature_cols = build_gold_dataset(prepared)
     join_cols = [col for col in catalogue_df.columns if col != "filiere"]
     join_coverage = prepared[join_cols].notna().any(axis=1).mean() if join_cols else float("nan")
     report = {
         "rows_raw": int(len(raw_df)),
         "duplicates_raw": int(raw_df.duplicated().sum()),
         "rows_after_cleaning": int(len(prepared)),
+        "rows_gold": int(len(gold_dataset)),
         "abandon_rate": float(prepared[F.TARGET_CLF].mean()),
         "catalogue_join_coverage": float(join_coverage),
         "feature_count": int(len(feature_cols)),

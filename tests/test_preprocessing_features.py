@@ -66,3 +66,29 @@ def test_scoring_feature_columns_exclude_forbidden_columns() -> None:
     F.assert_no_leakage(features)
     with pytest.raises(AssertionError):
         F.assert_no_leakage(["moyenne_finale"])
+
+
+def test_build_gold_dataset_contains_only_features_and_labels() -> None:
+    df = pd.DataFrame(
+        {
+            "student_id": ["stu-1"],
+            "id_dossier": ["dos-1"],
+            "moyenne_finale": [12.0],
+            "moyenne_partiels_s1": [10.0],
+            "nb_ue_validees_s1": [4],
+            "abandon": [0],
+            "groupe_td": ["A"],
+            "taux_presence_pct": [85.0],
+            "taux_rendu_devoirs": [0.9],
+        }
+    )
+
+    gold_dataset, feature_cols = F.build_gold_dataset(df)
+
+    assert feature_cols == ["taux_presence_pct", "taux_rendu_devoirs"]
+    assert gold_dataset.columns.tolist() == [
+        "taux_presence_pct",
+        "taux_rendu_devoirs",
+        "abandon",
+        "moyenne_finale",
+    ]

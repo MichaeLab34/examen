@@ -3,7 +3,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from decrochage.serving import ModelBundle, load_bundle, predict_proba_abandon, save_bundle
+from decrochage.serving import (
+    ModelBundle,
+    load_bundle,
+    predict_from_gold_dataset,
+    predict_proba_abandon,
+    save_bundle,
+)
 
 
 class DummyPipeline:
@@ -54,4 +60,18 @@ def test_bundle_reload_and_prediction_contract(tmp_path: Path) -> None:
 
     assert scored.columns.tolist() == ["proba_abandon", "alerte"]
     assert scored["proba_abandon"].between(0, 1).all()
+    assert scored["alerte"].tolist() == [0, 1]
+
+
+def test_prediction_from_gold_dataset_contract() -> None:
+    bundle = ModelBundle(
+        pipeline=DummyPipeline(),
+        feature_cols=["taux_rendu_devoirs"],
+        threshold=0.5,
+    )
+    gold_features = pd.DataFrame({"taux_rendu_devoirs": [0.9, 0.2]})
+
+    scored = predict_from_gold_dataset(bundle, gold_features)
+
+    assert scored.columns.tolist() == ["proba_abandon", "alerte"]
     assert scored["alerte"].tolist() == [0, 1]

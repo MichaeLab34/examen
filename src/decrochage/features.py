@@ -86,6 +86,30 @@ def assert_no_leakage(feature_cols: list[str]) -> None:
     ), f"Fuite de données : colonnes interdites présentes dans les features : {sorted(intruders)}"
 
 
+def build_gold_dataset(
+    prepared_df: pd.DataFrame,
+    *,
+    include_labels: bool = True,
+) -> tuple[pd.DataFrame, list[str]]:
+    """Build the ML-ready Gold dataset from a cleaned/enriched frame.
+
+    The Gold dataset is the only tabular source that model training and notebook
+    scoring should consume. It contains scoring features plus optional labels,
+    and excludes direct identifiers, leakage columns, constants, raw dates,
+    free text and explicit lure columns.
+    """
+    feature_cols = scoring_feature_columns(prepared_df)
+    assert_no_leakage(feature_cols)
+
+    columns = list(feature_cols)
+    if include_labels:
+        for target in (TARGET_CLF, TARGET_REG):
+            if target in prepared_df.columns:
+                columns.append(target)
+
+    return prepared_df.loc[:, columns].copy(), feature_cols
+
+
 def add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
     """Ajoute des variables métier disponibles à mi-S1 (aucune fuite).
 

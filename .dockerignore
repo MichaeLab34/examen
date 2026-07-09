@@ -2,9 +2,14 @@
 .github
 .ruff_cache
 .venv
+.env
+.env.*
 __pycache__
 *.pyc
 artifacts/figures
+artifacts/*.db
+artifacts/*.sqlite
+artifacts/*.sqlite3
 data/processed
 notebooks/.ipynb_checkpoints
 reports/*.pptx
