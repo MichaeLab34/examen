@@ -23,7 +23,7 @@ Les figures sont dans ../artifacts/figures/ (générées par le notebook).
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Staudt Michael** · *10/07/2026* · v1.2
+**Staudt Michael** · *11/07/2026* · v1.3
 Python 3.13 · scikit-learn · FastAPI · CLI · Postgres · notebook + package C1→C9
 
 <!--
@@ -130,7 +130,7 @@ colonne interdite entre dans le modèle. »
 - **Effet de marquage** : étiqueter « à risque » n'est pas neutre.
 - **RGPD** : finalité limitée (aide ≠ sanction), information, **décision humaine**
   (pas d'automatisation — art. 22).
-- **Sprint 1 appliqué** : Bronze brut restreint, Silver pseudonymisé HMAC,
+- **Compétence C2 appliquée** : Bronze brut restreint, Silver pseudonymisé HMAC,
   Gold sans identifiants directs, rétention/purge et audit `privacy_audit_log`.
 - **Secrets hors Git** : `.env` local ignoré, `.env.example` versionné.
 
@@ -323,7 +323,7 @@ Stack locale production-like : **Postgres via Docker Compose**.
 Fallback dev : SQLite local ignoré par Git.
 
 <!--
-[1:30] Faire le lien avec le Sprint 1 : Bronze reste brut parce que c'est la
+[1:30] Faire le lien avec C2/C7 : Bronze reste brut parce que c'est la
 zone de preuve et de reprise, mais elle est restreinte. Silver pseudonymise.
 Gold est la seule source de modélisation et de scoring. Mentionner la commande :
 decrochage medallion-load.
@@ -359,7 +359,7 @@ DSI, référents pédagogiques.
 - **Persistance** : rapports dans `gold_drift_report`, scores dans `gold_prediction`.
 - **Ré-entraînement** : annuel (nouvelle promotion) + événementiel (drift).
 - **Versioning** : données + modèle + métriques dans le bundle.
-- **Gouvernance** : model card, threat model, validation CI avant livraison.
+- **Gouvernance** : model card, threat model, matrice C1→C9, validation CI avant livraison.
 - **Extension production** : exporter métriques vers Prometheus/Grafana après validation DSI.
 
 <!--
@@ -374,7 +374,7 @@ logique. Le A/B test est ce qui permettrait de PROUVER que ça marche vraiment.
 
 - **Données synthétiques** → AUC élevée à revalider sur données réelles.
 - **Corrélation ≠ causalité** → A/B test nécessaire avant conclusion business.
-- **Production réelle** : DPO, DPIA/AIPD, RBAC DB, coffre de secrets, dashboards.
+- **Production réelle** : DPO, DPIA/AIPD, RBAC DB, coffre de secrets, dashboards, supervision.
 - **Éthique** : surveiller l'équité en continu, documenter les recours.
 - Le score **priorise**, il ne **décide** pas.
 
