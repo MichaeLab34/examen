@@ -6,7 +6,7 @@ This repository is a Python 3.13 ML project for early detection of student dropo
 
 ## Build, Test, and Development Commands
 
-- `uv sync --group notebook --group dev` installs runtime, notebook, and quality tooling from `pyproject.toml`.
+- `uv sync --group dev` installs runtime, notebook, and quality tooling from `pyproject.toml`; `dev` includes `notebook` so a later dev sync does not remove Jupyter.
 - `uv run jupyter lab` starts the local notebook environment.
 - `uv run jupyter nbconvert --to notebook --execute --inplace notebooks/decrochage_etudiant.ipynb` executes the full notebook workflow.
 - `uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv` validates data and leakage guards.

@@ -53,8 +53,10 @@ examen/
 ## Commandes utiles
 
 ```powershell
-uv sync --group notebook                 # installe l'environnement (Python 3.13)
-uv sync --group dev                       # installe les outils de qualité et tests
+# Installe l'environnement complet utile à l'examen : notebook + tests/qualité.
+# Important : avec uv, un second `uv sync --group dev` remplace l'ensemble de groupes
+# installé ; le groupe dev inclut donc notebook pour éviter de supprimer Jupyter.
+uv sync --group dev
 uv run jupyter lab                        # ouvre le notebook
 uv run jupyter nbconvert --to notebook --execute --inplace notebooks/decrochage_etudiant.ipynb
 uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
@@ -78,7 +80,9 @@ directs à partir de Silver par HMAC-SHA-256 via
 `DECROCHAGE_PSEUDONYMIZATION_SECRET`; Bronze reste brut et doit donc être
 restreint, audité et purgé. Voir
 `docs/industrialisation.md`, `docs/rgpd_accountability.md`,
-`docs/model_card.md`, `docs/monitoring_plan.md` et `docs/threat_model.md`.
+`docs/model_card.md`, `docs/monitoring_plan.md`, `docs/threat_model.md`,
+`docs/competences_c1_c9.md` et `docs/evidence_portfolio.md` pour la matrice de
+couverture et le portefeuille de preuves des ajouts InduSense adaptés à l'examen.
 
 ## Données
 
