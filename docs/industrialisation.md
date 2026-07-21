@@ -28,7 +28,7 @@ monitoring.
 - `decrochage serve` starts the FastAPI service.
 - `decrochage retraining-decision ...` separates drift investigation from a
   supervised retraining that requires fresh cohort labels.
-- `decrochage model-register`, `model-promote --approve` and `model-rollback`
+- `decrochage model-register --run-id <run-id>`, `model-promote --approve` and `model-rollback`
   implement the MLflow alias lifecycle with a human promotion gate.
 - `decrochage alert-decision` applies cooldown/hysteresis and `heartbeat`
   signals that a scheduled batch actually completed.
@@ -52,6 +52,18 @@ uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv da
 
 The local database contains student records and is intentionally ignored by Git.
 The pseudonymization secret must stay outside version control.
+
+## MLflow Tracking and Registry
+
+Docker Compose exposes MLflow on `http://localhost:5000`. Its metadata uses an
+isolated SQLite backend under `artifacts/mlflow-server/`; the application database
+remains dedicated to business data. The server stores run parameters, metrics,
+the JSON training report and the serialized model bundle. Registration requires
+the originating `run_id`, so every model version remains linked to its experiment.
+
+The API and scheduler use `http://mlflow:5000` inside Docker. Once a first version
+has been promoted, set `DECROCHAGE_REGISTERED_MODEL=decrochage-l1`; `/ready` then
+reports the active alias and version loaded from the registry.
 
 - Bronze tables keep one raw payload per source row with `batch_id`, `parse_ok`
   and `rejected_reason` fields for traceability. This layer can contain direct
@@ -84,6 +96,8 @@ reports.
   code redeployment; this route always requires `DECROCHAGE_API_KEY`.
 - Every response carries `X-Request-ID`; structured logs contain route, status
   and duration, never request payloads or API keys.
+- Runtime logs are emitted as one JSON object per line to container stderr. The
+  Docker `json-file` driver rotates them at 10 MB and retains at most five files.
 - `/predict` and `/admin/reload` apply `DECROCHAGE_RATE_LIMIT_PER_MINUTE` per
   client. A multi-instance deployment requires a shared edge limiter.
 

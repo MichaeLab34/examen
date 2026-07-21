@@ -58,6 +58,7 @@ def register_bundle(
     name: str,
     *,
     metrics: Mapping[str, Any] | None = None,
+    run_id: str | None = None,
     uri: str | None = None,
 ) -> int:
     """Register a serialized bundle as a candidate and persist gate metrics."""
@@ -65,13 +66,19 @@ def register_bundle(
     path = Path(bundle_path).resolve()
     if not path.exists():
         raise FileNotFoundError(path)
+    effective_uri = uri or os.getenv("MLFLOW_TRACKING_URI") or DEFAULT_MLFLOW_URI
+    if effective_uri.startswith(("http://", "https://")) and not run_id:
+        raise ValueError("run_id is required when registering with a remote MLflow server")
     _ensure_registered(name, uri=uri)
     client = _client(uri)
-    try:
-        source = path.relative_to(Path.cwd().resolve()).as_posix()
-    except ValueError:
-        source = path.as_uri()
-    model_version = client.create_model_version(name=name, source=source)
+    if run_id:
+        source = f"runs:/{run_id}/model_bundle/{path.name}"
+    else:
+        try:
+            source = path.relative_to(Path.cwd().resolve()).as_posix()
+        except ValueError:
+            source = path.as_uri()
+    model_version = client.create_model_version(name=name, source=source, run_id=run_id)
     version = int(model_version.version)
     for key, value in (metrics or {}).items():
         if key in METRIC_KEYS:
@@ -80,11 +87,23 @@ def register_bundle(
     return version
 
 
-def register_saved_bundle(bundle_path: str | Path, name: str, *, uri: str | None = None) -> int:
+def register_saved_bundle(
+    bundle_path: str | Path,
+    name: str,
+    *,
+    run_id: str | None = None,
+    uri: str | None = None,
+) -> int:
     """Load a saved bundle and register it with the metrics carried in metadata."""
 
     bundle = load_bundle(bundle_path)
-    return register_bundle(bundle_path, name, metrics=bundle.metadata, uri=uri)
+    return register_bundle(
+        bundle_path,
+        name,
+        metrics=bundle.metadata,
+        run_id=run_id,
+        uri=uri,
+    )
 
 
 def version_at(name: str, alias: str, *, uri: str | None = None) -> Any | None:
@@ -160,5 +179,18 @@ def load_bundle_by_alias(
     version = version_at(name, alias, uri=uri)
     if version is None:
         raise FileNotFoundError(f"No {alias!r} alias for registered model {name!r}")
-    bundle = load_bundle(_file_uri_to_path(version.source))
+    source = version.source
+    if source.startswith(("runs:/", "models:/", "mlflow-artifacts:/")):
+        import mlflow
+
+        configure_registry_uri(uri)
+        bundle_path = Path(
+            mlflow.artifacts.download_artifacts(
+                artifact_uri=source,
+                tracking_uri=uri or os.getenv("MLFLOW_TRACKING_URI") or DEFAULT_MLFLOW_URI,
+            )
+        )
+    else:
+        bundle_path = _file_uri_to_path(source)
+    bundle = load_bundle(bundle_path)
     return bundle, str(version.version)

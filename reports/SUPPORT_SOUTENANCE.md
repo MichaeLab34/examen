@@ -436,6 +436,43 @@ Docker locale avec Playwright.
 
 ---
 
+## 17.4 MLflow trace les entraînements
+
+![Deux runs terminés dans l'expérience MLflow](screenshots/docker/mlflow-runs.png)
+
+- Chaque entraînement enregistre paramètres, métriques, rapport JSON et bundle modèle.
+- Deux runs indépendants sont visibles dans `decrochage-l1-training`.
+
+---
+
+## 17.5 Versions, promotion et rollback
+
+![Registre MLflow après rollback](screenshots/docker/mlflow-registry.png)
+
+- La version 2 a été promue après validation humaine, puis archivée lors du rollback.
+- L'alias `production` référence de nouveau la version 1, chargée par l'API.
+- `/ready` expose `model_version=1` et `model_alias=production`.
+
+---
+
+## 17.6 Journaux JSON corrélés et bornés
+
+```json
+{"timestamp":"2026-07-21T14:05:24+00:00","level":"INFO","event":"api_request","request_id":"jury-log-proof-001","method":"GET","path":"/health","status":200,"duration_ms":2.45}
+```
+
+- Une ligne JSON par requête, sans payload étudiant ni clé API.
+- `X-Request-ID` relie la réponse utilisateur au journal technique.
+- Rotation Docker : **10 Mo par fichier, 5 fichiers conservés**.
+
+<!--
+[1:30] Montrer l'interface MLflow : deux runs, paramètres, métriques et artefacts.
+Puis montrer le registre : la version 1 est revenue en production après rollback.
+Conclure avec le log JSON corrélé et la rétention locale bornée.
+-->
+
+---
+
 ## 18. TCO & valeur du pilote — C7 / C9
 
 - **TCO** = hébergement + sauvegardes + temps DSI/DPO + revue du modèle + interventions.

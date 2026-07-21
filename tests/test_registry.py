@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from decrochage.registry import (
     load_bundle_by_alias,
@@ -70,3 +71,10 @@ def test_registry_candidate_promotion_and_rollback(tmp_path: Path) -> None:
 
     rollback_production(name, v1, uri=uri)
     assert int(version_at(name, "production", uri=uri).version) == v1
+
+
+def test_remote_registry_requires_originating_run(tmp_path: Path) -> None:
+    bundle_path = _bundle(tmp_path / "remote.joblib", recall=0.95)
+
+    with pytest.raises(ValueError, match="run_id is required"):
+        register_bundle(bundle_path, "decrochage-test-model", uri="http://mlflow:5000")

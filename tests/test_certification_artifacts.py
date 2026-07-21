@@ -50,6 +50,17 @@ def test_run_profile_provisions_dashboard_and_scheduler() -> None:
     assert "http_request_duration_seconds_bucket" in dashboard.read_text(encoding="utf-8")
 
 
+def test_compose_provisions_mlflow_and_bounded_json_logs() -> None:
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8").lower()
+
+    assert "mlflow:" in compose
+    assert '"5000:5000"' in compose
+    assert "sqlite:////app/artifacts/mlflow-server/mlflow.db" in compose
+    assert "driver: json-file" in compose
+    assert 'max-size: "10m"' in compose
+    assert 'max-file: "5"' in compose
+
+
 def test_evidence_portfolio_cites_operational_proofs() -> None:
     text = (ROOT / "docs/evidence_portfolio.md").read_text(encoding="utf-8").lower()
 
