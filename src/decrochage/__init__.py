@@ -20,4 +20,17 @@ classes/fonctions ne vivent pas dans `__main__`).
 
 from __future__ import annotations
 
-__all__ = ["preprocessing", "features", "serving", "training", "monitoring", "api", "cli"]
+__all__ = [
+    "preprocessing",
+    "features",
+    "serving",
+    "training",
+    "tracking",
+    "monitoring",
+    "operations",
+    "registry",
+    "alerting",
+    "scheduler",
+    "api",
+    "cli",
+]

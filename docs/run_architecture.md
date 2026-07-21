@@ -16,7 +16,7 @@ SI/LMS -> Caddy HTTPS -> FastAPI -> bundle MLflow @production
                          |    +-> Postgres Bronze/Silver/Gold
                          +------> /metrics -> Prometheus -> Grafana -> canal equipe
 
-Jobs planifies (scoring, drift, purge) -> heartbeat externe (silence detecte)
+APScheduler (drift, decision de reentrainement) -> heartbeat externe (silence detecte)
 Drift/performance/labels -> candidat -> gate rappel/AUC/equite -> validation humaine
                                                        |-> promotion ou rollback
 ```
@@ -45,8 +45,8 @@ en danger un flux temps réel, car le scoring peut être rejoué.
 
 ## Maintenance du modèle
 
-Le calendrier industriel mensuel du cours n'est pas adapté au décrochage : les
-labels fiables arrivent après la cohorte. La politique livrée combine :
+La fréquence de réentraînement suit la disponibilité réelle des résultats de
+cohorte. La politique livrée combine :
 
 - contrôle drift/qualité à chaque batch ;
 - investigation immédiate si PSI atteint `alert` ;
@@ -57,14 +57,18 @@ labels fiables arrivent après la cohorte. La politique livrée combine :
 
 MLflow conserve les versions et les alias `candidate`, `production`,
 `archived`. Le rollback repointe `production` vers une version précédente.
+Chaque entraînement CLI ou planifié ouvre aussi un run MLflow avec paramètres,
+métriques et bundle en artefact dans l'expérience `decrochage-l1-training`.
 L'API recharge ensuite l'alias via `POST /admin/reload`, protégé par la clé API.
 Les bundles enregistrés depuis la racine utilisent un chemin relatif
 `artifacts/...`, identique sur l'hôte et dans le conteneur `/app`.
 
 ## Alertes et silence
 
-Le service expose `/metrics`. Grafana attend cinq minutes avant d'alerter sur
-l'indisponibilité ou un taux de 5xx élevé, ce qui limite la fatigue d'alerte.
+Le service expose `/metrics`. Le dashboard Grafana provisionné présente la
+disponibilité, le débit, les statuts HTTP et la latence p95. Grafana attend cinq
+minutes avant d'alerter sur l'indisponibilité ou un taux de 5xx élevé, ce qui
+limite la fatigue d'alerte.
 Le canal d'équipe suffit en journée ; l'astreinte DSI n'est activée que pendant
 la fenêtre critique de scoring. Un heartbeat externe couvre l'angle mort d'une
 tâche planifiée qui ne démarre plus et n'émet donc aucune erreur.

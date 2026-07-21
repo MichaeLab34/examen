@@ -91,9 +91,10 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 **Couverture dans examen** :
 - `ModelBundle` sérialisé par joblib : pipeline, feature list, seuil, catalogue, métadonnées.
 - `predict_proba_abandon` accepte des données brutes et renvoie `proba_abandon` + `alerte`.
-- CLI : `check-data`, `train`, `predict`, `init-db`, `medallion-load`, `drift-report`, `serve`.
-- API FastAPI : `/health`, `/ready`, `/predict`, API key optionnelle.
+- CLI : qualité, entraînement suivi dans MLflow, scoring, persistance, drift, registre, rollback et ordonnanceur.
+- API FastAPI : `/health`, `/ready`, `/predict`, clé API, limitation de débit et journaux corrélés par `X-Request-ID`.
 - Dockerfile non-root et `compose.yaml` Postgres + API.
+- Profil Run : Caddy, Prometheus, dashboard/alertes Grafana et service APScheduler.
 - CI GitHub Actions : ruff, black, tests et build Docker de l'image de serving.
 - Portefeuille de preuves : `docs/evidence_portfolio.md` relie RGPD, médaillon, API/CLI, Docker/CI, drift PSI, model card/threat model et matrice C1→C9.
 
@@ -133,8 +134,10 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - `monitoring.build_drift_report` calcule le PSI par variable numérique.
 - Seuils : watch ≥ 0,10 ; alert ≥ 0,25.
 - Persistance possible des rapports dans `gold_drift_report`.
-- Plan mensuel/annuel : revue drift, performance labels arrivés, fairness, feedback métier, champion/challenger.
-- Réentraînement si baisse AUC/rappel, drift critique ou changement de politique d'accompagnement.
+- Contrôle de dérive hebdomadaire planifié et revue métier mensuelle des incidents et retours.
+- Décision annuelle ou anticipée selon dérive/performance, uniquement avec des labels frais.
+- Chaque entraînement est tracé dans MLflow ; le candidat est enregistré sans promotion automatique.
+- Promotion humaine, alias `candidate`/`production`/`archived`, rollback et heartbeat externe.
 
 **Phrase orale** : « Le modèle n'est pas livré une fois pour toutes : il est surveillé, revu avec les labels réels et remplacé seulement si un challenger prouve un gain. »
 
@@ -142,7 +145,7 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 
 Ces éléments resteraient disproportionnés ou hors sujet dans le livrable officiel :
 
-- Un orchestrateur lourd type Prefect : intéressant, mais non exigé pour l'examen et difficile à défendre en 30 minutes.
+- Un orchestrateur distribué : APScheduler couvre le besoin mono-instance ; une plateforme distribuée ne se justifie qu'en cas de montée en charge.
 - Anonymisation avancée k-anonymat/l-diversité/t-proximité : à citer comme culture RGPD, mais pas à appliquer sans besoin de publication de données ligne à ligne.
 - Deep learning : non pertinent pour ce tabulaire léger ; risque de dégrader l'explicabilité.
 

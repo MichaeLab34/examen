@@ -30,7 +30,9 @@ examen/
 │   ├── monitoring.py           # rapport de dérive PSI (C9)
 │   ├── operations.py           # politique Run : réentraînement + gate de promotion
 │   ├── registry.py             # aliases MLflow candidate/production/archived
+│   ├── tracking.py             # runs MLflow : paramètres, métriques, artefacts
 │   ├── alerting.py             # anti-spam + heartbeat des jobs planifiés
+│   ├── scheduler.py            # contrôles de dérive et réentraînement planifiés
 │   ├── persistence.py          # persistance SQL + couches Bronze/Silver/Gold
 │   ├── api.py                  # API FastAPI /health /ready /predict
 │   └── cli.py                  # commandes batch et service
@@ -68,8 +70,9 @@ uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/ca
 uv run decrochage model-register artifacts/models/model_bundle.joblib
 uv run decrochage model-promote 1 --approve
 uv run decrochage retraining-decision reports/drift_report.json --trained-on 2025-07-01 --labels-available
+uv run decrochage schedule --run-once monitoring
 uv run decrochage serve                   # démarre l'API FastAPI
-docker compose --profile run up --build   # HTTPS + API + Postgres + Prometheus/Grafana
+docker compose --profile run up --build   # API + ordonnanceur + HTTPS + observabilité
 uv run ruff check . ; uv run black --check . ; uv run pytest
 ```
 
@@ -79,9 +82,10 @@ Le notebook reste le livrable certifiant. Le chemin production léger est porté
 par le package : entraînement avec seuil choisi sur validation, bundle joblib,
 CLI, API FastAPI, persistance SQL en architecture médaillon, Dockerfile, CI
 GitHub Actions et rapport de dérive PSI. Le dispositif d'exploitation ajoute le cycle de vie complet :
-reverse-proxy Caddy/HTTPS, métriques Prometheus, alertes Grafana temporisées,
-heartbeat des traitements planifiés, politique annuelle de réentraînement et
-promotion/rollback par aliases MLflow avec validation humaine. La stack Docker
+reverse-proxy Caddy/HTTPS, métriques Prometheus, dashboard et alertes Grafana,
+ordonnanceur APScheduler avec heartbeat, politique annuelle de réentraînement,
+runs MLflow et promotion/rollback avec validation humaine. L'API ajoute une
+limite de débit et des journaux corrélés par `X-Request-ID` sans données étudiantes. La stack Docker
 Compose fournit une base Postgres locale ; `DECROCHAGE_DATABASE_URL` permet de viser une autre base
 compatible SQLAlchemy. Toute persistance BDD pseudonymise les identifiants
 directs à partir de Silver par HMAC-SHA-256 via
