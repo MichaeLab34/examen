@@ -322,6 +322,10 @@ def alert_decision(
 def model_register(
     bundle_path: Annotated[Path, typer.Argument(help="Saved joblib bundle path")],
     name: Annotated[str, typer.Option(help="Registered model name")] = "decrochage-l1",
+    run_id: Annotated[
+        str | None,
+        typer.Option(help="MLflow run containing model_bundle/<bundle filename>"),
+    ] = None,
     registry_uri: Annotated[
         str | None,
         typer.Option(help="MLflow tracking/registry URI; defaults to MLFLOW_TRACKING_URI"),
@@ -332,6 +336,7 @@ def model_register(
     version = register_saved_bundle(
         bundle_path,
         name,
+        run_id=run_id,
         uri=registry_uri or os.getenv("MLFLOW_TRACKING_URI"),
     )
     typer.echo(json.dumps({"name": name, "version": version, "alias": "candidate"}, indent=2))

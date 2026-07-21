@@ -66,13 +66,14 @@ uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/r
 uv run decrochage init-db
 uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 uv run decrochage purge-expired
-uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
-uv run decrochage model-register artifacts/models/model_bundle.joblib
-uv run decrochage model-promote 1 --approve
+docker compose --profile run up --build   # inclut MLflow sur http://localhost:5000
+$training = uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv --tracking-uri http://localhost:5000 | ConvertFrom-Json
+uv run decrochage model-register artifacts/models/model_bundle.joblib --run-id $training.mlflow.run_id --registry-uri http://localhost:5000
+uv run decrochage model-promote 1 --approve --registry-uri http://localhost:5000
 uv run decrochage retraining-decision reports/drift_report.json --trained-on 2025-07-01 --labels-available
 uv run decrochage schedule --run-once monitoring
 uv run decrochage serve                   # démarre l'API FastAPI
-docker compose --profile run up --build   # API + ordonnanceur + HTTPS + observabilité
+docker compose logs api --tail 20          # journaux JSON corrélés par request_id
 uv run ruff check . ; uv run black --check . ; uv run pytest
 ```
 

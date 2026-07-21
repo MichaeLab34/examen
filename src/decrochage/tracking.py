@@ -60,6 +60,8 @@ def track_training_result(
 ) -> TrackingRun:
     """Log parameters, scalar metrics and reproducibility artifacts to MLflow."""
 
+    # Keep CLI output machine-readable and avoid MLflow's Unicode links on Windows consoles.
+    os.environ.setdefault("MLFLOW_SUPPRESS_PRINTING_URL_TO_STDOUT", "true")
     import mlflow
 
     effective_uri = tracking_uri or os.getenv("MLFLOW_TRACKING_URI") or DEFAULT_MLFLOW_URI

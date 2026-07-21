@@ -22,6 +22,7 @@ artifacts/*.db
 artifacts/*.sqlite
 artifacts/*.sqlite3
 artifacts/mlflow-artifacts/
+artifacts/mlflow-server/
 
 # Données dérivées (les données brutes data/raw/ restent versionnées comme livrable)
 data/processed/*.csv

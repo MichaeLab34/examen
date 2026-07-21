@@ -60,8 +60,13 @@ MLflow conserve les versions et les alias `candidate`, `production`,
 Chaque entraînement CLI ou planifié ouvre aussi un run MLflow avec paramètres,
 métriques et bundle en artefact dans l'expérience `decrochage-l1-training`.
 L'API recharge ensuite l'alias via `POST /admin/reload`, protégé par la clé API.
-Les bundles enregistrés depuis la racine utilisent un chemin relatif
-`artifacts/...`, identique sur l'hôte et dans le conteneur `/app`.
+Chaque version enregistrée référence le `run_id` et l'artefact
+`model_bundle/model_bundle.joblib` qui l'a produite. Le serveur MLflow utilise
+un backend SQLite isolé de la base métier et est exposé sur le port 5000.
+
+Les requêtes API sont journalisées en JSON avec horodatage UTC, niveau, logger,
+`request_id`, route, statut et durée, sans payload étudiant. Docker limite chaque
+journal à 10 Mo et conserve cinq fichiers afin de borner l'espace disque.
 
 ## Alertes et silence
 
