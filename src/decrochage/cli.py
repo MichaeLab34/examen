@@ -27,7 +27,15 @@ from .persistence import (
 )
 from .preprocessing import clean_raw
 from .registry import promote_candidate, register_saved_bundle, rollback_production, version_at
+from .scheduler import (
+    SchedulerSettings,
+    build_scheduler,
+    run_monitoring_cycle,
+    run_retraining_cycle,
+    scheduler_manifest,
+)
 from .serving import load_bundle, predict_proba_abandon
+from .tracking import track_training_result
 from .training import build_gold_dataset, prepare_training_frame, train_model
 
 app = typer.Typer(help="Industrialized commands for the decrochage project.")
@@ -142,10 +150,32 @@ def train(
         Path,
         typer.Option("--output", "-o", help="Output model bundle path"),
     ] = Path("artifacts/models/model_bundle.joblib"),
+    track: Annotated[
+        bool,
+        typer.Option("--track/--no-track", help="Record the run in MLflow Tracking"),
+    ] = True,
+    experiment_name: Annotated[
+        str,
+        typer.Option(help="MLflow experiment name"),
+    ] = "decrochage-l1-training",
+    tracking_uri: Annotated[
+        str | None,
+        typer.Option(help="MLflow tracking URI; defaults to MLFLOW_TRACKING_URI"),
+    ] = None,
 ) -> None:
-    """Train a model bundle with train/validation/test separation."""
+    """Train a model bundle and record a reproducible MLflow experiment."""
     result = train_model(_read_csv(students), _read_csv(catalogue), output_path=output)
-    payload = {"model_path": str(result.output_path), "metrics": result.metrics}
+    payload: dict[str, object] = {
+        "model_path": str(result.output_path),
+        "metrics": result.metrics,
+    }
+    if track:
+        tracking = track_training_result(
+            result,
+            tracking_uri=tracking_uri or os.getenv("MLFLOW_TRACKING_URI"),
+            experiment_name=experiment_name,
+        )
+        payload["mlflow"] = tracking.to_dict()
     typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
@@ -368,6 +398,30 @@ def heartbeat(
         raise typer.BadParameter("A URL or DECROCHAGE_HEALTHCHECK_URL is required")
     status_code = ping_dead_mans_switch(target, success=success)
     typer.echo(json.dumps({"heartbeat_status": status_code, "success": success}, indent=2))
+
+
+@app.command("schedule")
+def schedule(
+    run_once: Annotated[
+        str | None,
+        typer.Option(help="Run only 'monitoring' or 'retraining', then exit"),
+    ] = None,
+) -> None:
+    """Run the operational scheduler or execute one scheduled cycle."""
+
+    settings = SchedulerSettings.from_env()
+    if run_once == "monitoring":
+        payload = run_monitoring_cycle(settings)
+    elif run_once == "retraining":
+        payload = run_retraining_cycle(settings)
+    elif run_once is not None:
+        raise typer.BadParameter("--run-once must be 'monitoring' or 'retraining'")
+    else:
+        scheduler = build_scheduler(settings)
+        typer.echo(json.dumps({"status": "starting", **scheduler_manifest(settings)}, indent=2))
+        scheduler.start()
+        return
+    typer.echo(json.dumps(payload, indent=2, ensure_ascii=False, default=str))
 
 
 @app.command("serve")

@@ -13,13 +13,15 @@
 
 ## Cadence
 
-- During the mid-S1 scoring window: run data-quality and drift checks on every
-  batch, then persist the report with `decrochage drift-report --persist-db
-  --batch-id <id>`.
-- Monthly: review alert rate, subgroup metrics, unresolved incidents and
-  support-team feedback.
-- Annually: retrain when the next labelled cohort is available, then compare
-  `candidate` vs `production` on recall, AUC and fairness before human approval.
+- APScheduler runs the drift control every Monday at 06:00 Europe/Paris by
+  default; it can also be executed with `decrochage schedule --run-once monitoring`.
+- During the mid-S1 scoring window, data-quality and drift checks also run on
+  every imported batch.
+- Monthly, the team reviews alert rate, subgroup metrics, unresolved incidents
+  and support-team feedback.
+- APScheduler evaluates the retraining policy every Monday at 07:00. Drift,
+  performance or the annual review can trigger a candidate, but only when fresh
+  labels are available; production comparison and human approval follow.
 
 ## Actions
 
@@ -43,6 +45,8 @@ drift and purge jobs.
 ## Persistence
 
 Drift reports are written as JSON artifacts and can also be stored in the
-`gold_drift_report` SQL table. This keeps the monitoring decision attached to an
+`gold_drift_report` SQL table. Scheduler state is written atomically under
+`artifacts/scheduler/state.json`, which prevents duplicate execution after a
+same-day restart. This keeps the monitoring decision attached to an
 ingestion `batch_id`, with `status`, `watch_count`, `alert_count` and the full
 report payload available for dashboards or later audits.

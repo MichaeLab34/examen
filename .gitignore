@@ -21,6 +21,7 @@ artifacts/figures/*.png
 artifacts/*.db
 artifacts/*.sqlite
 artifacts/*.sqlite3
+artifacts/mlflow-artifacts/
 
 # Données dérivées (les données brutes data/raw/ restent versionnées comme livrable)
 data/processed/*.csv
@@ -31,6 +32,7 @@ reports/drift_report.json
 
 # OS / IDE
 .DS_Store
+~$*.pptx
 .vscode/
 .idea/
 .claude/

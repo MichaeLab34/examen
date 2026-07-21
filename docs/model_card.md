@@ -33,7 +33,10 @@ also records the maximum recall gap observed across monitored `sexe` and
 
 ## Model Lifecycle
 
-New bundles enter MLflow as `candidate`. Promotion to `production` is blocked
+Each training opens an MLflow run with parameters, metrics and the serialized
+bundle as an artifact. APScheduler evaluates drift and the retraining policy
+weekly; the annual review remains one trigger among drift and performance. When fresh labels justify training, the resulting bundle enters
+the registry as `candidate`. Promotion to `production` is blocked
 unless test AUC is at least 0.85, recall is at least 0.90 and does not regress
 against the current production model, and the monitored subgroup recall gap is
 at most 10 points. Passing the technical gate is insufficient: a human reviewer

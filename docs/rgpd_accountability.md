@@ -55,6 +55,6 @@ uv run decrochage purge-expired
   review, rights of access/rectification/opposition.
 - Store secrets in a managed secret vault, not in `.env` files.
 - Enable platform encryption at rest and role-based DB access.
-- Add request-level audit logs without raw payloads.
+- Verify request-level audit-log retention and access; logs contain no raw payloads.
 - Complete a DPIA/AIPD if required by the DPO.
 - Run a reidentification/anonymization study before any row-level export.

@@ -25,6 +25,15 @@
 ## Job silencieux
 
 1. Le heartbeat absent déclenche l'alerte externe.
-2. Vérifier le planificateur, l'espace disque et les secrets.
-3. Rejouer le job de façon idempotente et confirmer le nombre de lignes Gold.
-4. Envoyer `decrochage heartbeat` seulement après validation complète du job.
+2. Vérifier `docker compose --profile run ps scheduler`, puis ses journaux.
+3. Afficher le manifeste avec `decrochage schedule --help` et contrôler les expressions cron.
+4. Rejouer avec `decrochage schedule --run-once monitoring` ou `--run-once retraining` ; l'état persistant évite un doublon le même jour.
+5. Vérifier le rapport PSI, le run MLflow et, le cas échéant, la nouvelle version `candidate`.
+6. Envoyer `decrochage heartbeat` seulement après validation complète du job.
+
+## Limitation de débit ou traçabilité
+
+1. Récupérer `X-Request-ID` dans la réponse et rechercher cet identifiant dans les journaux API.
+2. Pour un HTTP 429, respecter `Retry-After` et réduire la fréquence du client.
+3. Ne jamais ajouter le payload étudiant ou la clé API aux journaux.
+4. En déploiement multi-instance, activer un limiteur partagé au niveau du point d'entrée.

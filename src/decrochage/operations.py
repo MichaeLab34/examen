@@ -46,7 +46,7 @@ def decide_retraining(
 
     Drift can trigger an investigation immediately, but a supervised model must
     not be retrained without fresh dropout labels. The calendar is therefore an
-    annual safety net rather than the monthly cadence used for industrial sensors.
+    annual safety net aligned with the availability of confirmed cohort outcomes.
     """
 
     drift_status = str(drift_report.get("summary", {}).get("status", "missing"))

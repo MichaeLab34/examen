@@ -26,7 +26,10 @@ services:
       DECROCHAGE_PSEUDONYMIZATION_SECRET: ${DECROCHAGE_PSEUDONYMIZATION_SECRET:?DECROCHAGE_PSEUDONYMIZATION_SECRET is required}
       DECROCHAGE_RETENTION_DAYS: ${DECROCHAGE_RETENTION_DAYS:-365}
       DECROCHAGE_API_KEY: ${DECROCHAGE_API_KEY:-}
+      DECROCHAGE_RATE_LIMIT_PER_MINUTE: ${DECROCHAGE_RATE_LIMIT_PER_MINUTE:-60}
       MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-sqlite:////app/artifacts/mlflow.db}
+      MLFLOW_ARTIFACT_ROOT: /app/artifacts/mlflow-artifacts
+      MLFLOW_EXPERIMENT_NAME: ${MLFLOW_EXPERIMENT_NAME:-decrochage-l1-training}
       DECROCHAGE_REGISTERED_MODEL: ${DECROCHAGE_REGISTERED_MODEL:-}
       DECROCHAGE_MODEL_ALIAS: ${DECROCHAGE_MODEL_ALIAS:-production}
     ports:
@@ -38,6 +41,36 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  scheduler:
+    build: .
+    profiles: ["run"]
+    command: ["decrochage", "schedule"]
+    environment:
+      DECROCHAGE_REFERENCE_CSV: /app/data/raw/decrochage_etudiants_complet_V5.csv
+      DECROCHAGE_CURRENT_CSV: /app/data/raw/decrochage_etudiants_echantillon_V5.csv
+      DECROCHAGE_STUDENTS_CSV: /app/data/raw/decrochage_etudiants_complet_V5.csv
+      DECROCHAGE_CATALOGUE_CSV: /app/data/raw/catalogue_formations_V5.csv
+      DECROCHAGE_DRIFT_REPORT_PATH: /app/reports/drift_report.json
+      DECROCHAGE_MODEL_PATH: /app/artifacts/models/model_bundle.joblib
+      DECROCHAGE_SCHEDULER_STATE: /app/artifacts/scheduler/state.json
+      DECROCHAGE_TRAINED_ON: ${DECROCHAGE_TRAINED_ON:-2024-09-01}
+      DECROCHAGE_LABELS_AVAILABLE: ${DECROCHAGE_LABELS_AVAILABLE:-false}
+      DECROCHAGE_PERFORMANCE_ALERT: ${DECROCHAGE_PERFORMANCE_ALERT:-false}
+      DECROCHAGE_MONITOR_CRON: ${DECROCHAGE_MONITOR_CRON:-0 6 * * 1}
+      DECROCHAGE_RETRAIN_CRON: ${DECROCHAGE_RETRAIN_CRON:-0 7 * * 1}
+      DECROCHAGE_SCHEDULER_TIMEZONE: ${DECROCHAGE_SCHEDULER_TIMEZONE:-Europe/Paris}
+      DECROCHAGE_HEALTHCHECK_URL: ${DECROCHAGE_HEALTHCHECK_URL:-}
+      DECROCHAGE_ALERT_WEBHOOK_URL: ${DECROCHAGE_ALERT_WEBHOOK_URL:-}
+      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-sqlite:////app/artifacts/mlflow.db}
+      MLFLOW_ARTIFACT_ROOT: /app/artifacts/mlflow-artifacts
+      MLFLOW_EXPERIMENT_NAME: ${MLFLOW_EXPERIMENT_NAME:-decrochage-l1-training}
+      DECROCHAGE_REGISTERED_MODEL: ${DECROCHAGE_REGISTERED_MODEL:-decrochage-l1}
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data:ro
+      - ./reports:/app/reports
+    restart: unless-stopped
 
   caddy:
     image: caddy:2-alpine
@@ -73,7 +106,7 @@ services:
     depends_on:
       - prometheus
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       DECROCHAGE_ALERT_WEBHOOK_URL: ${DECROCHAGE_ALERT_WEBHOOK_URL:-http://localhost:9999/alert-placeholder}
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

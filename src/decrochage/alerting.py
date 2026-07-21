@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
+import json
 from typing import Any, Mapping
 from urllib.request import Request, urlopen
 
@@ -64,5 +65,26 @@ def ping_dead_mans_switch(url: str, *, success: bool = True, timeout_seconds: fl
 
     target = url.rstrip("/") if success else f"{url.rstrip('/')}/fail"
     request = Request(target, method="GET", headers={"User-Agent": "decrochage-run/1.0"})
+    with urlopen(request, timeout=timeout_seconds) as response:  # noqa: S310 - operator URL
+        return int(response.status)
+
+
+def post_alert_webhook(
+    url: str,
+    payload: Mapping[str, Any],
+    *,
+    timeout_seconds: float = 5.0,
+) -> int:
+    """Post an operational event to the configured team webhook."""
+
+    request = Request(
+        url,
+        data=json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8"),
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": "decrochage-run/1.0",
+        },
+    )
     with urlopen(request, timeout=timeout_seconds) as response:  # noqa: S310 - operator URL
         return int(response.status)

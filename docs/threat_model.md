@@ -12,11 +12,11 @@ and social-context variables.
 |---|---|---|
 | Spoofing | Unauthorized prediction calls | Optional `DECROCHAGE_API_KEY` with `X-API-Key` |
 | Tampering | Invalid payload changes scoring behavior | Pydantic request validation and feature guard |
-| Repudiation | No trace of scoring operations | Add request logging in the target deployment |
+| Repudiation | No trace of scoring operations | Structured request log with `X-Request-ID`, route, status and duration |
 | Information disclosure | Student data leaked through logs | Do not log payloads or API keys |
 | Information disclosure | Direct identifiers stored in restricted Bronze | RBAC, no payload logging, retention purge, DPO-controlled access |
 | Information disclosure | Direct identifiers propagated to analytical layers | HMAC-SHA-256 pseudonymization from Silver onward |
-| Denial of service | Oversized prediction payload | API schema caps requests at 500 records |
+| Denial of service | Oversized or repeated prediction calls | API schema caps requests at 500 records and applies a configurable per-client rate limit |
 | Elevation of privilege | Container escape impact | Docker image runs as non-root `appuser` |
 
 ## RGPD Notes
@@ -27,8 +27,14 @@ and social-context variables.
 - Human review: alerts are recommendations for support teams.
 - Accountability: privacy actions are logged in `privacy_audit_log`.
 
-## Open Production Work
+## Production Deployment Gates
 
-Before real deployment, add infrastructure-level rate limiting, request-level
-audit logs, managed secret storage, encryption at rest controlled by the hosting
-platform and formal DPO validation of the register/DPIA.
+The application controls are executable in the prototype: API key, request
+correlation without payload logging, per-client rate limiting, schema limits,
+retention and pseudonymisation. A multi-instance deployment must replace the
+in-memory limiter with a shared edge or Redis-backed limiter.
+
+Before processing real student data, the DSI must provide managed secret
+storage and encryption at rest with documented key rotation. The DPO must
+validate the processing register and DPIA. These organisational approvals are
+go-live gates and are not represented as completed by this repository.

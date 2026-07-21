@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+from collections import defaultdict, deque
+import json
+import logging
 import os
 from pathlib import Path
+import re
+from threading import Lock
+from time import monotonic, perf_counter
+from uuid import uuid4
 
 import pandas as pd
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.responses import JSONResponse
 
 from .registry import load_bundle_by_alias
 from .schemas import (
@@ -20,6 +28,34 @@ from .schemas import (
 from .serving import ModelBundle, load_bundle, predict_proba_abandon
 
 DEFAULT_MODEL_PATH = Path("artifacts/models/model_bundle.joblib")
+REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+AUDIT_LOGGER = logging.getLogger("decrochage.api.audit")
+AUDIT_LOGGER.setLevel(logging.INFO)
+
+
+class SlidingWindowRateLimiter:
+    """Thread-safe limiter for the single-instance prototype API."""
+
+    def __init__(self, limit: int, window_seconds: float = 60.0) -> None:
+        self.limit = max(0, limit)
+        self.window_seconds = window_seconds
+        self._requests: dict[str, deque[float]] = defaultdict(deque)
+        self._lock = Lock()
+
+    def allow(self, key: str, *, now: float | None = None) -> tuple[bool, int]:
+        if self.limit == 0:
+            return True, 0
+        current = monotonic() if now is None else now
+        cutoff = current - self.window_seconds
+        with self._lock:
+            events = self._requests[key]
+            while events and events[0] <= cutoff:
+                events.popleft()
+            if len(events) >= self.limit:
+                retry_after = max(1, int(self.window_seconds - (current - events[0])) + 1)
+                return False, retry_after
+            events.append(current)
+            return True, 0
 
 
 def _configured_model_path() -> Path:
@@ -40,6 +76,20 @@ def _configured_model_alias() -> str:
 
 def _configured_registry_uri() -> str | None:
     return os.getenv("MLFLOW_TRACKING_URI") or None
+
+
+def _configured_rate_limit() -> int:
+    value = os.getenv("DECROCHAGE_RATE_LIMIT_PER_MINUTE", "60")
+    try:
+        return max(0, int(value))
+    except ValueError as exc:
+        raise ValueError("DECROCHAGE_RATE_LIMIT_PER_MINUTE must be an integer") from exc
+
+
+def _request_id(value: str | None) -> str:
+    if value and REQUEST_ID_PATTERN.fullmatch(value):
+        return value
+    return uuid4().hex
 
 
 def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
@@ -98,6 +148,46 @@ def create_app() -> FastAPI:
     app.state.model_path = model_source
     app.state.model_version = model_version
     app.state.model_alias = _configured_model_alias() if _configured_registered_model() else None
+    app.state.rate_limiter = SlidingWindowRateLimiter(_configured_rate_limit())
+
+    @app.middleware("http")
+    async def operational_controls(request: Request, call_next):
+        request_id = _request_id(request.headers.get("X-Request-ID"))
+        request.state.request_id = request_id
+        started = perf_counter()
+        client_host = request.client.host if request.client else "unknown"
+        response = None
+        try:
+            if request.url.path in {"/predict", "/admin/reload"}:
+                allowed, retry_after = request.app.state.rate_limiter.allow(
+                    f"{client_host}:{request.url.path}"
+                )
+                if not allowed:
+                    response = JSONResponse(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        content={"detail": "Rate limit exceeded"},
+                        headers={"Retry-After": str(retry_after)},
+                    )
+                else:
+                    response = await call_next(request)
+            else:
+                response = await call_next(request)
+            response.headers["X-Request-ID"] = request_id
+            return response
+        finally:
+            AUDIT_LOGGER.info(
+                json.dumps(
+                    {
+                        "event": "api_request",
+                        "request_id": request_id,
+                        "method": request.method,
+                        "path": request.url.path,
+                        "status": response.status_code if response is not None else 500,
+                        "duration_ms": round((perf_counter() - started) * 1000, 2),
+                    },
+                    separators=(",", ":"),
+                )
+            )
 
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:

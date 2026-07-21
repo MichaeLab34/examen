@@ -40,10 +40,12 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 
 **Implémentation CLI** :
 - `check-data` : qualité, jointure catalogue, garde-fou anti-fuite.
-- `train` : entraînement, validation, seuil métier et sérialisation.
+- `train` : entraînement, validation, seuil métier, sérialisation et run MLflow.
 - `predict` : scoring batch avec sortie CSV et persistance optionnelle.
 - `init-db`, `medallion-load`, `purge-expired` : cycle BDD/RGPD.
 - `drift-report` : rapport PSI.
+- `model-register`, `model-promote`, `model-rollback` : cycle de vie contrôlé.
+- `schedule` : contrôles planifiés ou exécution ponctuelle vérifiable.
 - `serve` : API FastAPI.
 
 **Implémentation API** :
@@ -51,6 +53,8 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 - `GET /ready`
 - `POST /predict`
 - Authentification optionnelle par `DECROCHAGE_API_KEY` / `X-API-Key`.
+- Limitation de débit configurable sur les routes sensibles.
+- Journal structuré sans payload et corrélation par `X-Request-ID`.
 
 **Preuves** :
 - `src/decrochage/cli.py`
@@ -66,7 +70,7 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 **Docker** :
 - `Dockerfile` construit une image de serving Python 3.13.
 - L'image tourne avec un utilisateur non-root `appuser`.
-- `compose.yaml` fournit Postgres + API locale avec secrets exigés via variables d'environnement.
+- `compose.yaml` fournit Postgres + API et un profil Run avec Caddy, APScheduler, Prometheus et Grafana.
 
 **CI** :
 - `.github/workflows/ci.yml` exécute lint, formatage, tests et build Docker.
@@ -78,7 +82,23 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 - `.github/workflows/ci.yml`
 - `tests/test_certification_artifacts.py`
 
-## 5. Drift PSI
+## 5. Suivi MLflow et registre
+
+**Objectif** : relier une expérience reproductible à chaque candidat et séparer entraînement, validation et promotion.
+
+**Implémentation** :
+- `tracking.track_training_result` ouvre un run dans `decrochage-l1-training`.
+- Paramètres, métriques scalaires, rapport JSON et bundle joblib sont enregistrés comme preuves.
+- Le registre utilise les alias `candidate`, `production` et `archived`.
+- La promotion exige les seuils techniques puis une approbation humaine explicite.
+
+**Preuves** :
+- `src/decrochage/tracking.py`
+- `src/decrochage/registry.py`
+- `tests/test_tracking.py`
+- `tests/test_registry.py`
+
+## 6. Drift PSI et ordonnancement
 
 **Objectif examen** : couvrir C9 avec une surveillance simple, compréhensible et chiffrée.
 
@@ -87,14 +107,32 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 - `monitoring.classify_psi` applique les seuils : `watch >= 0.10`, `alert >= 0.25`.
 - `monitoring.build_drift_report` produit un rapport JSON compact.
 - `decrochage drift-report` écrit le rapport et peut le persister dans `gold_drift_report`.
+- Le service APScheduler exécute le contrôle de dérive puis évalue chaque semaine la politique de réentraînement, dont l'échéance annuelle est un déclencheur.
+- Un réentraînement justifié produit uniquement un candidat ; la production n'est jamais promue automatiquement.
+- L'état atomique empêche les doublons après redémarrage le même jour et le heartbeat détecte le silence.
 
 **Preuves** :
 - `src/decrochage/monitoring.py`
 - `tests/test_monitoring.py`
+- `tests/test_scheduler.py`
 - `docs/monitoring_plan.md`
 - Notebook §13.
 
-## 6. Model Card / Threat Model
+## 7. Observabilité Grafana
+
+**Objectif** : rendre l'état du service visible et actionnable.
+
+**Implémentation** :
+- Prometheus collecte `/metrics`.
+- Le dashboard provisionné affiche disponibilité, débit, erreurs 5xx, latence p95 et statuts HTTP.
+- Les alertes attendent cinq minutes avant notification et pointent vers le runbook.
+
+**Preuves** :
+- `monitoring/grafana/provisioning/dashboards/json/decrochage-run.json`
+- `monitoring/grafana/provisioning/alerting/rules.yml`
+- `docs/runbook.md`
+
+## 8. Model Card / Threat Model
 
 **Objectif examen** : documenter l'usage prévu, les limites et les risques opérationnels/sécurité.
 
@@ -107,14 +145,15 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 **Threat Model** :
 - Surface : API FastAPI de scoring.
 - Menaces : spoofing, tampering, repudiation, information disclosure, DoS, elevation of privilege.
-- Contrôles : API key, validation Pydantic, non-root container, pas de payload logging, rétention, pseudonymisation.
+- Contrôles : API key, validation Pydantic, limite de débit, `X-Request-ID`, journal sans payload, non-root, rétention et pseudonymisation.
+- Gates réelles : stockage de secrets, chiffrement au repos et validation DPO avant données réelles.
 
 **Preuves** :
 - `docs/model_card.md`
 - `docs/threat_model.md`
 - `docs/rgpd_accountability.md`
 
-## 7. Matrice C1 → C9
+## 9. Matrice C1 → C9
 
 **Objectif examen** : rendre la couverture des compétences explicite pour ne pas laisser le jury deviner.
 
@@ -135,6 +174,7 @@ En soutenance, ne pas présenter ces ajouts comme une usine technique. Les prés
 2. Médaillon Bronze / Silver / Gold : tracer et séparer les responsabilités.
 3. API / CLI : rejouer hors notebook.
 4. Docker / CI : reproduire et vérifier.
-5. Drift PSI : surveiller après déploiement.
-6. Model card / threat model : documenter usage, limites et risques.
-7. Matrice C1 → C9 : prouver la conformité au référentiel.
+5. MLflow et ordonnanceur : tracer les expériences et produire des candidats contrôlés.
+6. Drift PSI et Grafana : surveiller les données et le service.
+7. Model card / threat model : documenter usage, limites et risques.
+8. Matrice C1 → C9 : prouver la conformité au référentiel.
