@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, timezone
 import json
-import logging
 import os
 from pathlib import Path
 from typing import Any, Callable
@@ -20,6 +19,7 @@ from .alerting import (
     ping_dead_mans_switch,
     post_alert_webhook,
 )
+from .logging_config import configure_json_logger
 from .monitoring import build_drift_report, write_drift_report
 from .operations import decide_retraining
 from .preprocessing import clean_raw
@@ -27,7 +27,7 @@ from .registry import register_saved_bundle
 from .tracking import track_training_result
 from .training import train_model
 
-LOGGER = logging.getLogger("decrochage.scheduler")
+LOGGER = configure_json_logger("decrochage.scheduler")
 
 
 @dataclass(frozen=True)
@@ -260,6 +260,7 @@ def run_retraining_cycle(
         version = register_saved_bundle(
             settings.bundle_path,
             settings.registered_model,
+            run_id=tracking_run.run_id,
             uri=settings.tracking_uri,
         )
         state = _read_state(settings.state_path)

@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -14,11 +20,43 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging: *default-logging
+
+  mlflow:
+    build: .
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - sqlite:////app/artifacts/mlflow-server/mlflow.db
+      - --artifacts-destination
+      - /app/artifacts/mlflow-artifacts
+      - --serve-artifacts
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --workers
+      - "1"
+      - --allowed-hosts
+      - localhost:*,127.0.0.1:*,mlflow:*
+    volumes:
+      - ./artifacts:/app/artifacts
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    logging: *default-logging
 
   api:
     build: .
     depends_on:
       postgres:
+        condition: service_healthy
+      mlflow:
         condition: service_healthy
     environment:
       DECROCHAGE_MODEL_PATH: /app/artifacts/models/model_bundle.joblib
@@ -27,7 +65,7 @@ services:
       DECROCHAGE_RETENTION_DAYS: ${DECROCHAGE_RETENTION_DAYS:-365}
       DECROCHAGE_API_KEY: ${DECROCHAGE_API_KEY:-}
       DECROCHAGE_RATE_LIMIT_PER_MINUTE: ${DECROCHAGE_RATE_LIMIT_PER_MINUTE:-60}
-      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-sqlite:////app/artifacts/mlflow.db}
+      MLFLOW_TRACKING_URI: http://mlflow:5000
       MLFLOW_ARTIFACT_ROOT: /app/artifacts/mlflow-artifacts
       MLFLOW_EXPERIMENT_NAME: ${MLFLOW_EXPERIMENT_NAME:-decrochage-l1-training}
       DECROCHAGE_REGISTERED_MODEL: ${DECROCHAGE_REGISTERED_MODEL:-}
@@ -41,11 +79,15 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+    logging: *default-logging
 
   scheduler:
     build: .
     profiles: ["run"]
     command: ["decrochage", "schedule"]
+    depends_on:
+      mlflow:
+        condition: service_healthy
     environment:
       DECROCHAGE_REFERENCE_CSV: /app/data/raw/decrochage_etudiants_complet_V5.csv
       DECROCHAGE_CURRENT_CSV: /app/data/raw/decrochage_etudiants_echantillon_V5.csv
@@ -62,7 +104,7 @@ services:
       DECROCHAGE_SCHEDULER_TIMEZONE: ${DECROCHAGE_SCHEDULER_TIMEZONE:-Europe/Paris}
       DECROCHAGE_HEALTHCHECK_URL: ${DECROCHAGE_HEALTHCHECK_URL:-}
       DECROCHAGE_ALERT_WEBHOOK_URL: ${DECROCHAGE_ALERT_WEBHOOK_URL:-}
-      MLFLOW_TRACKING_URI: ${MLFLOW_TRACKING_URI:-sqlite:////app/artifacts/mlflow.db}
+      MLFLOW_TRACKING_URI: http://mlflow:5000
       MLFLOW_ARTIFACT_ROOT: /app/artifacts/mlflow-artifacts
       MLFLOW_EXPERIMENT_NAME: ${MLFLOW_EXPERIMENT_NAME:-decrochage-l1-training}
       DECROCHAGE_REGISTERED_MODEL: ${DECROCHAGE_REGISTERED_MODEL:-decrochage-l1}
@@ -71,6 +113,7 @@ services:
       - ./data:/app/data:ro
       - ./reports:/app/reports
     restart: unless-stopped
+    logging: *default-logging
 
   caddy:
     image: caddy:2-alpine
@@ -87,6 +130,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    logging: *default-logging
 
   prometheus:
     image: prom/prometheus:v3.5.0
@@ -99,6 +143,7 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:
       - "9090:9090"
+    logging: *default-logging
 
   grafana:
     image: grafana/grafana:12.1.0
@@ -113,6 +158,7 @@ services:
       - grafana_data:/var/lib/grafana
     ports:
       - "3000:3000"
+    logging: *default-logging
 
 volumes:
   postgres_data:

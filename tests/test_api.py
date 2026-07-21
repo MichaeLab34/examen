@@ -1,8 +1,10 @@
+from io import StringIO
+
 import numpy as np
 import pandas as pd
 from fastapi.testclient import TestClient
 
-from decrochage.api import create_app
+from decrochage.api import AUDIT_LOGGER, create_app
 from decrochage.serving import ModelBundle
 
 
@@ -93,7 +95,7 @@ def test_metrics_endpoint_is_exposed(monkeypatch) -> None:
     assert "http_requests_total" in response.text
 
 
-def test_request_id_is_returned_and_logged_without_payload(monkeypatch, caplog) -> None:
+def test_request_id_is_returned_and_logged_without_payload(monkeypatch) -> None:
     monkeypatch.setenv("DECROCHAGE_MODEL_PATH", "missing/model.joblib")
     app = create_app()
     app.state.bundle = ModelBundle(
@@ -104,17 +106,27 @@ def test_request_id_is_returned_and_logged_without_payload(monkeypatch, caplog) 
     )
     client = TestClient(app)
 
-    with caplog.at_level("INFO", logger="decrochage.api.audit"):
+    stream = StringIO()
+    handler = next(
+        item for item in AUDIT_LOGGER.handlers if getattr(item, "decrochage_json", False)
+    )
+    previous_stream = handler.setStream(stream)
+    try:
         response = client.post(
             "/predict",
             headers={"X-Request-ID": "jury-demo-001"},
             json={"records": [PREDICTION_RECORD]},
         )
+    finally:
+        handler.setStream(previous_stream)
 
+    log_output = stream.getvalue()
     assert response.status_code == 200
     assert response.headers["X-Request-ID"] == "jury-demo-001"
-    assert '"request_id":"jury-demo-001"' in caplog.text
-    assert "Informatique" not in caplog.text
+    assert '"request_id":"jury-demo-001"' in log_output
+    assert '"event":"api_request"' in log_output
+    assert '"timestamp":' in log_output
+    assert "Informatique" not in log_output
 
 
 def test_predict_rate_limit_returns_429_and_retry_after(monkeypatch) -> None:

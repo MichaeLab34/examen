@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 import json
-import logging
 import os
 from pathlib import Path
 import re
@@ -17,6 +16,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.responses import JSONResponse
 
+from .logging_config import configure_json_logger
 from .registry import load_bundle_by_alias
 from .schemas import (
     HealthResponse,
@@ -29,8 +29,7 @@ from .serving import ModelBundle, load_bundle, predict_proba_abandon
 
 DEFAULT_MODEL_PATH = Path("artifacts/models/model_bundle.joblib")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
-AUDIT_LOGGER = logging.getLogger("decrochage.api.audit")
-AUDIT_LOGGER.setLevel(logging.INFO)
+AUDIT_LOGGER = configure_json_logger("decrochage.api.audit")
 
 
 class SlidingWindowRateLimiter:

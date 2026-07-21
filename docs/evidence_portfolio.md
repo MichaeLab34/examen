@@ -97,6 +97,13 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 - `src/decrochage/registry.py`
 - `tests/test_tracking.py`
 - `tests/test_registry.py`
+- `reports/screenshots/docker/mlflow-runs.png`
+- `reports/screenshots/docker/mlflow-registry.png`
+
+**Preuve d'exécution** : deux runs terminés sont visibles dans l'expérience
+`decrochage-l1-training`. Le registre contient deux versions ; après promotion de
+la version 2 puis rollback, l'alias `production` référence la version 1 et la
+version 2 est `archived`.
 
 ## 6. Drift PSI et ordonnancement
 
@@ -134,7 +141,14 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 - `reports/screenshots/docker/grafana-alert-rules.png`
 - `reports/screenshots/docker/prometheus-targets.png`
 - `reports/screenshots/docker/caddy-https-api.png`
+- `reports/screenshots/docker/mlflow-runs.png`
+- `reports/screenshots/docker/mlflow-registry.png`
 - `docs/runbook.md`
+
+Les journaux de requêtes sont émis en JSON sur stderr avec `request_id`, route,
+statut et durée. Le driver Docker `json-file` applique `max-size=10m` et
+`max-file=5`, ce qui fournit une rétention locale bornée sans introduire une
+plateforme de centralisation disproportionnée.
 
 **Frontière notebook / exploitation** : le notebook démontre la préparation des données,
 l'entraînement, l'évaluation et l'explicabilité. Il ne peut pas, à lui seul, prouver
