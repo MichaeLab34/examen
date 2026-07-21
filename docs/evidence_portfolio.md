@@ -130,7 +130,17 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 **Preuves** :
 - `monitoring/grafana/provisioning/dashboards/json/decrochage-run.json`
 - `monitoring/grafana/provisioning/alerting/rules.yml`
+- `reports/screenshots/docker/grafana-dashboard.png`
+- `reports/screenshots/docker/grafana-alert-rules.png`
+- `reports/screenshots/docker/prometheus-targets.png`
+- `reports/screenshots/docker/caddy-https-api.png`
 - `docs/runbook.md`
+
+**Frontière notebook / exploitation** : le notebook démontre la préparation des données,
+l'entraînement, l'évaluation et l'explicabilité. Il ne peut pas, à lui seul, prouver
+le routage HTTPS, la collecte périodique des métriques, le chargement d'un dashboard
+provisionné ou l'évaluation continue des alertes. Ces éléments nécessitent les services
+Docker en fonctionnement et sont documentés par des captures Playwright de l'exécution réelle.
 
 ## 8. Model Card / Threat Model
 
