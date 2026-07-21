@@ -12,6 +12,18 @@ class DummyPipeline:
         return np.column_stack([1 - proba, proba])
 
 
+PREDICTION_RECORD = {
+    "filiere": "Informatique",
+    "nb_devoirs_total": 10,
+    "nb_devoirs_rendus": 6,
+    "connexions_lms_30j": 4,
+    "heures_lms_total": 2,
+    "ressources_consultees": 8,
+    "commentaire_tuteur": "",
+    "date_inscription": "2024-09-01",
+}
+
+
 def test_health_and_ready_when_model_missing(monkeypatch) -> None:
     monkeypatch.setenv("DECROCHAGE_MODEL_PATH", "missing/model.joblib")
     client = TestClient(create_app())
@@ -79,6 +91,51 @@ def test_metrics_endpoint_is_exposed(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert "http_requests_total" in response.text
+
+
+def test_request_id_is_returned_and_logged_without_payload(monkeypatch, caplog) -> None:
+    monkeypatch.setenv("DECROCHAGE_MODEL_PATH", "missing/model.joblib")
+    app = create_app()
+    app.state.bundle = ModelBundle(
+        pipeline=DummyPipeline(),
+        feature_cols=["taux_rendu_devoirs"],
+        threshold=0.5,
+        catalogue=pd.DataFrame({"filiere": ["Informatique"]}),
+    )
+    client = TestClient(app)
+
+    with caplog.at_level("INFO", logger="decrochage.api.audit"):
+        response = client.post(
+            "/predict",
+            headers={"X-Request-ID": "jury-demo-001"},
+            json={"records": [PREDICTION_RECORD]},
+        )
+
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == "jury-demo-001"
+    assert '"request_id":"jury-demo-001"' in caplog.text
+    assert "Informatique" not in caplog.text
+
+
+def test_predict_rate_limit_returns_429_and_retry_after(monkeypatch) -> None:
+    monkeypatch.setenv("DECROCHAGE_MODEL_PATH", "missing/model.joblib")
+    monkeypatch.setenv("DECROCHAGE_RATE_LIMIT_PER_MINUTE", "1")
+    app = create_app()
+    app.state.bundle = ModelBundle(
+        pipeline=DummyPipeline(),
+        feature_cols=["taux_rendu_devoirs"],
+        threshold=0.5,
+        catalogue=pd.DataFrame({"filiere": ["Informatique"]}),
+    )
+    client = TestClient(app)
+    payload = {"records": [PREDICTION_RECORD]}
+
+    assert client.post("/predict", json=payload).status_code == 200
+    limited = client.post("/predict", json=payload)
+
+    assert limited.status_code == 429
+    assert int(limited.headers["Retry-After"]) >= 1
+    assert limited.headers["X-Request-ID"]
 
 
 def test_admin_reload_requires_key_and_replaces_bundle(monkeypatch) -> None:

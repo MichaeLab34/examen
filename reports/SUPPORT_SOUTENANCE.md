@@ -295,11 +295,12 @@ JAMAIS pour prédire abandon.
 
 - **Bundle sérialisé** (joblib) : Pipeline + features + seuil + catalogue + métadonnées.
 - Package `decrochage` : `training.py`, `serving.py`, `api.py`, `cli.py`,
-  `persistence.py`, `monitoring.py`.
+  `persistence.py`, `monitoring.py`, `tracking.py`, `scheduler.py`.
 - **Contrats industrialisés** : CLI batch, API FastAPI `/predict`, bundle rechargeable hors notebook.
-- **Cycle de vie** : registre MLflow (`candidate` → `production` → `archived`) + rollback.
-- **Observabilité** : `/metrics`, Prometheus/Grafana, alertes temporisées et heartbeat.
-- **Qualité** : 36 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
+- **Sécurité API** : clé, limite de débit, requêtes corrélées sans journaliser les données.
+- **Cycle de vie** : runs MLflow (paramètres, métriques, artefacts), registre + rollback.
+- **Observabilité** : `/metrics`, dashboard Grafana provisionné, alertes et heartbeat.
+- **Qualité** : 48 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
 - Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
 
 <!--
@@ -359,9 +360,13 @@ Les montants sont des ordres de grandeur à confirmer par la DSI, pas des devis.
 1. **Contrôler chaque batch** : qualité + PSI (`watch` ≥ 0,10 ; `alert` ≥ 0,25).
 2. **Dérive sans labels frais** : investiguer la collecte, ne pas réentraîner à l'aveugle.
 3. **Labels de la nouvelle cohorte disponibles** : entraîner un `candidate` annuel.
-4. **Gate** : AUC ≥ 0,85 · rappel ≥ 0,90 sans régression · écart équité ≤ 10 pts.
-5. **Validation humaine obligatoire**, puis alias MLflow `production`.
-6. Si le Run se dégrade : **rollback** vers la version précédente.
+4. **Tracer l'expérience** : paramètres, métriques et bundle dans un run MLflow.
+5. **Gate** : AUC ≥ 0,85 · rappel ≥ 0,90 sans régression · écart équité ≤ 10 pts.
+6. **Validation humaine obligatoire**, puis alias MLflow `production` ou rollback.
+
+APScheduler contrôle puis évalue la politique chaque semaine ; l'échéance
+annuelle reste un déclencheur. Un
+redémarrage le même jour ne crée pas de doublon.
 
 <!--
 [2:00] Dans ce contexte, un réentraînement mensuel
@@ -378,8 +383,9 @@ boursier = 1,9 pt) mais reste « en attente » sans approbation humaine.
 | Besoin | Réponse |
 |---|---|
 | Quotidien | canal d'équipe réussite étudiante / DSI |
-| Incident technique | Grafana : API indisponible ou 5xx > 1 % **pendant 5 min** |
-| Tâche silencieuse | heartbeat externe : scoring/drift/purge attendu mais absent |
+| Vue Run | dashboard Grafana : disponibilité, débit, statuts HTTP, latence p95 |
+| Incident technique | API indisponible ou 5xx > 1 % **pendant 5 min** |
+| Tâche silencieuse | heartbeat externe : contrôle drift/réentraînement attendu mais absent |
 | Critique | astreinte DSI seulement pendant la fenêtre de scoring |
 
 **Hystérésis + cooldown 24 h** : une dérive persistante ne spamme pas l'équipe.
@@ -434,7 +440,7 @@ sur données réelles. »
 - **Rigueur anti-fuite** (3 pièges neutralisés + garde-fou).
 - **Modèle explicable** performant (AUC 0,95, rappel 95,9 %).
 - **Seuil calibré** sur le coût métier.
-- **Run maîtrisé** : HTTPS, métriques, alertes, heartbeat, promotion humaine et rollback.
+- **Prototype Run vérifiable** : HTTPS, métriques, alertes, heartbeat, promotion humaine et rollback.
 - **RGPD documenté et implémenté** dès la persistance.
 
 **Merci — vos questions ?**

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Mapping
 from urllib.parse import unquote, urlparse
@@ -11,6 +12,7 @@ from .serving import ModelBundle, load_bundle
 
 ALIASES: tuple[str, ...] = ("candidate", "production", "archived")
 METRIC_KEYS: tuple[str, ...] = ("auc_test", "recall_test", "fairness_recall_gap_test")
+DEFAULT_MLFLOW_URI = "sqlite:///artifacts/mlflow.db"
 
 
 def _mlflow_modules() -> tuple[Any, Any]:
@@ -21,13 +23,12 @@ def _mlflow_modules() -> tuple[Any, Any]:
 
 
 def configure_registry_uri(uri: str | None) -> None:
-    """Use one URI for tracking and registry when explicitly configured."""
+    """Use one SQLite-safe URI for tracking and registry."""
 
-    if not uri:
-        return
+    effective_uri = uri or os.getenv("MLFLOW_TRACKING_URI") or DEFAULT_MLFLOW_URI
     mlflow, _ = _mlflow_modules()
-    mlflow.set_tracking_uri(uri)
-    mlflow.set_registry_uri(uri)
+    mlflow.set_tracking_uri(effective_uri)
+    mlflow.set_registry_uri(effective_uri)
 
 
 def _client(uri: str | None = None) -> Any:

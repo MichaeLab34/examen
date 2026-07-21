@@ -17,7 +17,8 @@ monitoring.
   ML-ready feature rows in Gold.
 - `decrochage purge-expired` deletes batches past their RGPD retention window.
 - `decrochage train ... --output artifacts/models/model_bundle.joblib` trains a
-  bundle with train/validation/test separation.
+  bundle with train/validation/test separation and records parameters, metrics
+  and artifacts in MLflow Tracking.
 - `decrochage predict artifacts/models/model_bundle.joblib input.csv --output reports/predictions.csv`
   scores raw SI/LMS records. Add `--persist-db --batch-id <id>` to store the
   predictions in the Gold table.
@@ -31,6 +32,8 @@ monitoring.
   implement the MLflow alias lifecycle with a human promotion gate.
 - `decrochage alert-decision` applies cooldown/hysteresis and `heartbeat`
   signals that a scheduled batch actually completed.
+- `decrochage schedule` starts the APScheduler daemon. Use `--run-once
+  monitoring` or `--run-once retraining` for an auditable manual execution.
 
 ## Database & Medallion Architecture
 
@@ -79,6 +82,10 @@ reports.
 - `GET /metrics`: Prometheus metrics for availability, errors and latency.
 - `POST /admin/reload`: reloads the configured `production` alias without a
   code redeployment; this route always requires `DECROCHAGE_API_KEY`.
+- Every response carries `X-Request-ID`; structured logs contain route, status
+  and duration, never request payloads or API keys.
+- `/predict` and `/admin/reload` apply `DECROCHAGE_RATE_LIMIT_PER_MINUTE` per
+  client. A multi-instance deployment requires a shared edge limiter.
 
 Set `DECROCHAGE_MODEL_PATH` to select the model bundle. Set
 `DECROCHAGE_API_KEY` to require an `X-API-Key` header. Set
@@ -93,11 +100,14 @@ Build and run locally:
 docker compose up --build
 ```
 
-Run the complete operational stack (Caddy, Prometheus and Grafana included):
+Run the complete operational stack (scheduler, Caddy, Prometheus and Grafana included):
 
 ```bash
 docker compose --profile run up --build
 ```
+
+Grafana provisions the `Décrochage L1 - Run API` dashboard and its alert rules
+from versioned files under `monitoring/grafana/provisioning`.
 
 The production recommendation, indicative TCO, alternatives and operational
 trade-offs are documented in `docs/run_architecture.md`; incident actions are

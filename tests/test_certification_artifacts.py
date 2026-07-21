@@ -36,3 +36,22 @@ def test_ci_builds_docker_image_in_addition_to_quality_checks() -> None:
 
     assert "docker" in text
     assert "docker/build-push-action" in text or "docker build" in text
+
+
+def test_run_profile_provisions_dashboard_and_scheduler() -> None:
+    compose = (ROOT / "compose.yaml").read_text(encoding="utf-8").lower()
+    dashboard = ROOT / "monitoring/grafana/provisioning/dashboards/json/decrochage-run.json"
+    provider = ROOT / "monitoring/grafana/provisioning/dashboards/provider.yml"
+
+    assert "scheduler:" in compose
+    assert '["decrochage", "schedule"]' in compose
+    assert dashboard.exists()
+    assert provider.exists()
+    assert "http_request_duration_seconds_bucket" in dashboard.read_text(encoding="utf-8")
+
+
+def test_evidence_portfolio_cites_operational_proofs() -> None:
+    text = (ROOT / "docs/evidence_portfolio.md").read_text(encoding="utf-8").lower()
+
+    for marker in ["mlflow", "apscheduler", "dashboard", "x-request-id", "limitation de débit"]:
+        assert marker in text
