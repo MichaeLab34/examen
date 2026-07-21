@@ -398,6 +398,44 @@ déclenche l'alerte. L'astreinte 24/7 permanente serait disproportionnée ici.
 
 ---
 
+## 17.1 Grafana confirme un service disponible
+
+![Dashboard Grafana alimenté par la stack Docker](screenshots/docker/grafana-dashboard.png)
+
+- Disponibilité, débit par route, erreurs 5xx et latence p95 sont visibles en conditions réelles.
+- Les mesures proviennent de l'API conteneurisée et de Prometheus, pas de sorties calculées dans le notebook.
+
+---
+
+## 17.2 Prometheus collecte, Grafana alerte
+
+![Cible API active dans Prometheus](screenshots/docker/prometheus-targets.png)
+
+![Règles d'alerte provisionnées dans Grafana](screenshots/docker/grafana-alert-rules.png)
+
+- Prometheus confirme que la cible `decrochage-api` est collectée sur `/metrics` avec l'état `UP`.
+- Grafana évalue deux règles provisionnées : indisponibilité de l'API et taux d'erreurs 5xx supérieur à 1 %.
+
+---
+
+## 17.3 Caddy expose l'API en HTTPS
+
+![Documentation Swagger chargée via Caddy en HTTPS](screenshots/docker/caddy-https-api.png)
+
+- Caddy termine HTTPS et transmet les requêtes au conteneur API.
+- Le certificat est local pour la démonstration ; un domaine et un certificat gérés seraient requis en production.
+
+> Ces preuves ne peuvent pas être produites par le notebook seul : Caddy, Prometheus et Grafana sont des processus réseau indépendants, exécutés dans la stack Docker et vérifiés depuis un navigateur.
+
+<!--
+[1:00] Montrer que le notebook prouve la démarche analytique, tandis que ces
+captures prouvent l'exploitation réelle : HTTPS, collecte périodique, dashboard
+et évaluation continue des alertes. Les captures ont été réalisées sur la stack
+Docker locale avec Playwright.
+-->
+
+---
+
 ## 18. TCO & valeur du pilote — C7 / C9
 
 - **TCO** = hébergement + sauvegardes + temps DSI/DPO + revue du modèle + interventions.
