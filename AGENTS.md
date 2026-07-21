@@ -34,4 +34,4 @@ Recent commits use short, imperative summaries in French or English, for example
 
 ## Security & Agent-Specific Instructions
 
-Treat `data/raw/`, generated databases under `artifacts/`, Postgres volumes, and `DECROCHAGE_PSEUDONYMIZATION_SECRET` as sensitive. Do not commit credentials, local notebooks with secrets, generated databases, or large regenerated artifacts unless they are required deliverables. The related Obsidian vault is at `/Users/michael/ObsidianVaults/Formation_IA/`. Never use `rm -rf`; use `trash <path>` so files remain recoverable.
+Treat `data/raw/`, generated databases under `artifacts/`, Postgres volumes, and `DECROCHAGE_PSEUDONYMIZATION_SECRET` as sensitive. Do not commit credentials, local notebooks with secrets, generated databases, or large regenerated artifacts unless they are required deliverables. Never use `rm -rf`; use `trash <path>` so files remain recoverable.

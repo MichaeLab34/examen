@@ -1,6 +1,6 @@
 # Matrice de couverture des compétences C1 → C9
 
-Objectif : rendre explicite ce que le projet d'examen démontre, où le jury peut le vérifier, et ce qui vient de la formation InduSense sans sortir des consignes de l'énoncé.
+Objectif : rendre explicite ce que le projet démontre et où le jury peut le vérifier, dans le strict périmètre de l'énoncé.
 
 Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipynb`. Cette matrice sert de preuve de traçabilité et d'aide à l'oral.
 
@@ -31,8 +31,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Leurres explicitement analysés : `groupe_td`, `couleur_carte_etudiante`, `jour_inscription`.
 - Catalogue joint via `filiere` avec couverture vérifiée.
 
-**Héritage InduSense utile** : comme dans Sprint 2, on distingue source brute, enrichissement référentiel et Gold dataset exploitable.
-
 **Phrase orale** : « Je ne pars pas du modèle : je pars du moment de décision, mi-S1. Toute variable indisponible à ce moment est exclue, même si elle améliorerait artificiellement l'AUC. »
 
 ### C2 — Éthique, RGPD et biais
@@ -45,8 +43,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Décision humaine : le score propose, l'équipe pédagogique décide.
 - Bronze brut restreint ; Silver/Gold pseudonymisés HMAC ; rétention et audit `privacy_audit_log`.
 - Menaces STRIDE documentées dans `docs/threat_model.md`.
-
-**Héritage InduSense utile** : Sprint 1 RGPD/anonymisation : HMAC, minimisation, publication prudente, distinction pseudonymisation/anonymisation.
 
 **Phrase orale** : « Retirer une variable sensible ne suffit pas : des proxys peuvent reproduire un biais. C'est pour cela que je prévois un audit par sous-groupes et une validation DPO avant usage réel. »
 
@@ -61,8 +57,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Imputation et encodage placés dans `Pipeline` sklearn pour éviter d'apprendre sur validation/test.
 - Persistance médaillon : Bronze, Silver, Gold.
 
-**Héritage InduSense utile** : Sprint 2 médaillon Bronze/Silver/Gold et tests de non-fuite.
-
 **Phrase orale** : « Le nettoyage est déterministe et rejouable ; l'imputation n'est pas faite avant le split, elle est apprise dans la pipeline sur le train seulement. »
 
 ### C4 — Choix du modèle
@@ -74,8 +68,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Comparaison régression logistique / Random Forest / XGBoost ou fallback selon environnement.
 - Courbes ROC et AUC.
 - Choix final : régression logistique, car performance suffisante, explicabilité forte, coût faible.
-
-**Héritage InduSense utile** : Sprint 2 a montré qu'un modèle plus complexe n'est pas automatiquement préférable si le signal et les contraintes métier ne le justifient pas.
 
 **Phrase orale** : « Je privilégie le modèle le plus simple qui atteint le niveau de performance attendu, parce que le contexte exige explicabilité et sobriété. »
 
@@ -89,8 +81,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Déséquilibre géré par `class_weight="balanced"`.
 - Seuil choisi sur validation par coût métier FN:FP = 5:1.
 - Test hold-out réservé au reporting final.
-
-**Héritage InduSense utile** : Sprint 2/3 : distinction validation vs test final, seuil métier, non-déploiement si la validation opérationnelle n'est pas robuste.
 
 **Phrase orale** : « Le test ne sert pas à choisir le modèle ni le seuil ; il sert seulement à mesurer ce que la décision déjà prise donne sur données jamais vues. »
 
@@ -107,8 +97,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - CI GitHub Actions : ruff, black, tests et build Docker de l'image de serving.
 - Portefeuille de preuves : `docs/evidence_portfolio.md` relie RGPD, médaillon, API/CLI, Docker/CI, drift PSI, model card/threat model et matrice C1→C9.
 
-**Héritage InduSense utile** : Sprint 3 industrialisation : CLI, API, Docker, CI, sécurité d'accès.
-
 **Phrase orale** : « Le notebook prouve la démarche ; le package prouve que la solution est rejouable hors notebook. »
 
 ### C7 — Architecture cible
@@ -121,8 +109,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Restitution : score priorisé pour référents/tuteurs.
 - Acteurs : scolarité, LMS, réussite étudiante, DSI, DPO, enseignants, data/ML.
 - Contraintes : RGPD, adoption, budget d'accompagnement, éco-conception.
-
-**Héritage InduSense utile** : Sprint 2 médaillon + Sprint 3 passage exploration → exploitation.
 
 **Phrase orale** : « Je ne mets pas directement le CSV dans le modèle : je sépare les responsabilités pour tracer, nettoyer, scorer et auditer. »
 
@@ -137,8 +123,6 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Audit équité par sous-groupes sensibles/proxys.
 - Régression secondaire de `moyenne_finale` avec métriques adaptées.
 
-**Héritage InduSense utile** : Sprint 2 seuil métier et lecture des impacts plutôt que performance brute.
-
 **Phrase orale** : « La précision plus faible est assumée : on accepte des alertes en trop pour éviter de manquer des étudiants réellement à risque. »
 
 ### C9 — Amélioration continue
@@ -152,16 +136,13 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - Plan mensuel/annuel : revue drift, performance labels arrivés, fairness, feedback métier, champion/challenger.
 - Réentraînement si baisse AUC/rappel, drift critique ou changement de politique d'accompagnement.
 
-**Héritage InduSense utile** : Sprint 3 drift, alerting, observabilité et runbooks ; ici version allégée adaptée à l'énoncé.
-
 **Phrase orale** : « Le modèle n'est pas livré une fois pour toutes : il est surveillé, revu avec les labels réels et remplacé seulement si un challenger prouve un gain. »
 
-## Points à ne pas sur-ajouter
+## Limites de périmètre
 
-Ces éléments viennent d'InduSense mais seraient risqués ou hors sujet s'ils encombraient le livrable officiel :
+Ces éléments resteraient disproportionnés ou hors sujet dans le livrable officiel :
 
 - Un orchestrateur lourd type Prefect : intéressant, mais non exigé pour l'examen et difficile à défendre en 30 minutes.
-- Grafana/Prometheus complet : utile en production, mais le plan de monitoring + PSI suffit pour C9.
 - Anonymisation avancée k-anonymat/l-diversité/t-proximité : à citer comme culture RGPD, mais pas à appliquer sans besoin de publication de données ligne à ligne.
 - Deep learning : non pertinent pour ce tabulaire léger ; risque de dégrader l'explicabilité.
 

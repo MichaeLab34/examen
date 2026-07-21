@@ -1,6 +1,6 @@
 # RGPD Accountability
 
-This document maps the Sprint 1 RGPD expectations to concrete controls in this
+This document maps the RGPD requirements to concrete controls in this
 project. It is a certification proof, not a substitute for a DPO sign-off.
 
 ## Data Classification

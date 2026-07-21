@@ -1,4 +1,4 @@
-# Portefeuille de preuves — ajouts InduSense appliqués à l'examen
+# Portefeuille de preuves du projet
 
 Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il complète le notebook certifiant sans le remplacer : le notebook reste le livrable principal, ce fichier sert de table d'orientation pour la soutenance et la relecture.
 
@@ -119,7 +119,7 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 **Objectif examen** : rendre la couverture des compétences explicite pour ne pas laisser le jury deviner.
 
 **Implémentation** :
-- `docs/competences_c1_c9.md` mappe chaque compétence vers : preuves, héritage InduSense utile, phrase à défendre à l'oral.
+- `docs/competences_c1_c9.md` mappe chaque compétence vers les preuves et la phrase à défendre à l'oral.
 - Le README pointe vers cette matrice.
 
 **Preuves** :

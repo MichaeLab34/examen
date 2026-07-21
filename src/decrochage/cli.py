@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
@@ -10,7 +12,9 @@ import pandas as pd
 import typer
 
 from . import features as F
+from .alerting import AlertEventSnapshot, evaluate_drift_alert, ping_dead_mans_switch
 from .monitoring import build_drift_report, write_drift_report
+from .operations import decide_retraining
 from .persistence import (
     DATABASE_URL_ENV,
     initialize_database,
@@ -22,6 +26,7 @@ from .persistence import (
     redacted_database_url,
 )
 from .preprocessing import clean_raw
+from .registry import promote_candidate, register_saved_bundle, rollback_production, version_at
 from .serving import load_bundle, predict_proba_abandon
 from .training import build_gold_dataset, prepare_training_frame, train_model
 
@@ -30,6 +35,10 @@ app = typer.Typer(help="Industrialized commands for the decrochage project.")
 
 def _read_csv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, encoding="utf-8-sig")
+
+
+def _read_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 @app.command("init-db")
@@ -225,6 +234,140 @@ def drift_report(
             except ValueError as exc:
                 raise typer.BadParameter(str(exc)) from exc
     typer.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+
+
+@app.command("retraining-decision")
+def retraining_decision(
+    drift_report_json: Annotated[Path, typer.Argument(help="PSI drift report JSON path")],
+    trained_on: Annotated[str, typer.Option(help="Current production training date (YYYY-MM-DD)")],
+    as_of: Annotated[
+        str, typer.Option(help="Decision date (YYYY-MM-DD)")
+    ] = date.today().isoformat(),
+    labels_available: Annotated[
+        bool,
+        typer.Option(help="Fresh abandonment labels are available for supervised retraining"),
+    ] = False,
+    performance_alert: Annotated[
+        bool,
+        typer.Option(help="Observed AUC/recall crossed its alert threshold"),
+    ] = False,
+) -> None:
+    """Apply the annual-cohort retraining policy to a monitoring report."""
+
+    decision = decide_retraining(
+        _read_json(drift_report_json),
+        trained_on=date.fromisoformat(trained_on),
+        as_of=date.fromisoformat(as_of),
+        labels_available=labels_available,
+        performance_alert=performance_alert,
+    )
+    typer.echo(json.dumps(decision.to_dict(), indent=2, ensure_ascii=False))
+
+
+@app.command("alert-decision")
+def alert_decision(
+    drift_report_json: Annotated[Path, typer.Argument(help="PSI drift report JSON path")],
+    last_triggered_at: Annotated[
+        str | None,
+        typer.Option(help="Last unresolved alert timestamp in ISO-8601 format"),
+    ] = None,
+    cooldown_hours: Annotated[float, typer.Option(help="Minimum delay before a reminder")] = 24.0,
+) -> None:
+    """Evaluate drift alert hysteresis and cooldown without sending a notification."""
+
+    last_event = None
+    if last_triggered_at:
+        parsed = datetime.fromisoformat(last_triggered_at.replace("Z", "+00:00"))
+        last_event = AlertEventSnapshot(triggered_at=parsed)
+    decision = evaluate_drift_alert(
+        _read_json(drift_report_json),
+        now=datetime.now(timezone.utc),
+        last_event=last_event,
+        cooldown=pd.Timedelta(hours=cooldown_hours).to_pytimedelta(),
+    )
+    typer.echo(json.dumps(decision.to_dict(), indent=2, ensure_ascii=False, default=str))
+
+
+@app.command("model-register")
+def model_register(
+    bundle_path: Annotated[Path, typer.Argument(help="Saved joblib bundle path")],
+    name: Annotated[str, typer.Option(help="Registered model name")] = "decrochage-l1",
+    registry_uri: Annotated[
+        str | None,
+        typer.Option(help="MLflow tracking/registry URI; defaults to MLFLOW_TRACKING_URI"),
+    ] = None,
+) -> None:
+    """Register a trained bundle as the candidate model."""
+
+    version = register_saved_bundle(
+        bundle_path,
+        name,
+        uri=registry_uri or os.getenv("MLFLOW_TRACKING_URI"),
+    )
+    typer.echo(json.dumps({"name": name, "version": version, "alias": "candidate"}, indent=2))
+
+
+@app.command("model-promote")
+def model_promote(
+    version: Annotated[int, typer.Argument(help="Candidate version to evaluate")],
+    name: Annotated[str, typer.Option(help="Registered model name")] = "decrochage-l1",
+    approve: Annotated[
+        bool,
+        typer.Option("--approve", help="Record the required human approval"),
+    ] = False,
+    registry_uri: Annotated[str | None, typer.Option(help="MLflow tracking/registry URI")] = None,
+) -> None:
+    """Evaluate and, with explicit approval, promote a candidate to production."""
+
+    decision = promote_candidate(
+        name,
+        version,
+        human_approved=approve,
+        uri=registry_uri or os.getenv("MLFLOW_TRACKING_URI"),
+    )
+    typer.echo(json.dumps(decision.to_dict(), indent=2, ensure_ascii=False))
+    if not decision.approved_for_production:
+        raise typer.Exit(code=2)
+
+
+@app.command("model-rollback")
+def model_rollback(
+    version: Annotated[int, typer.Argument(help="Previous version to restore")],
+    name: Annotated[str, typer.Option(help="Registered model name")] = "decrochage-l1",
+    registry_uri: Annotated[str | None, typer.Option(help="MLflow tracking/registry URI")] = None,
+) -> None:
+    """Restore a previous production version by moving the MLflow alias."""
+
+    rollback_production(
+        name,
+        version,
+        uri=registry_uri or os.getenv("MLFLOW_TRACKING_URI"),
+    )
+    current = version_at(
+        name,
+        "production",
+        uri=registry_uri or os.getenv("MLFLOW_TRACKING_URI"),
+    )
+    typer.echo(json.dumps({"name": name, "production_version": int(current.version)}, indent=2))
+
+
+@app.command("heartbeat")
+def heartbeat(
+    url: Annotated[
+        str | None,
+        typer.Option(help="healthchecks.io-compatible URL; defaults to DECROCHAGE_HEALTHCHECK_URL"),
+    ] = None,
+    success: Annotated[
+        bool, typer.Option(help="Send a success ping; use --no-success on failure")
+    ] = True,
+) -> None:
+    """Signal that a scheduled scoring, monitoring or retraining job ran."""
+
+    target = url or os.getenv("DECROCHAGE_HEALTHCHECK_URL")
+    if not target:
+        raise typer.BadParameter("A URL or DECROCHAGE_HEALTHCHECK_URL is required")
+    status_code = ping_dead_mans_switch(target, success=success)
+    typer.echo(json.dumps({"heartbeat_status": status_code, "success": success}, indent=2))
 
 
 @app.command("serve")

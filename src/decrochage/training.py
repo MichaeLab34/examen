@@ -43,6 +43,36 @@ class TrainingResult:
     output_path: Path | None = None
 
 
+def subgroup_recall_gap(
+    X: pd.DataFrame,
+    y_true: pd.Series,
+    y_pred: np.ndarray,
+    *,
+    subgroup_cols: tuple[str, ...] = ("sexe", "boursier"),
+) -> tuple[float, dict[str, dict[str, float]]]:
+    """Return the largest recall gap observed across monitored subgroups."""
+
+    details: dict[str, dict[str, float]] = {}
+    gaps: list[float] = []
+    predictions = pd.Series(y_pred, index=y_true.index)
+    for column in subgroup_cols:
+        if column not in X.columns:
+            continue
+        recalls: dict[str, float] = {}
+        groups = X[column].fillna("missing").astype(str)
+        for group_name in sorted(groups.unique()):
+            mask = groups.eq(group_name)
+            positives = int(y_true.loc[mask].sum())
+            if positives == 0:
+                continue
+            recalls[group_name] = float(recall_score(y_true.loc[mask], predictions.loc[mask]))
+        if len(recalls) >= 2:
+            values = list(recalls.values())
+            gaps.append(max(values) - min(values))
+        details[column] = recalls
+    return (max(gaps, default=0.0), details)
+
+
 def split_train_validation_test_indices(
     y: pd.Series,
     *,
@@ -246,6 +276,7 @@ def train_model(
 
     proba_test = final_model.predict_proba(X_test)[:, 1]
     pred_test = (proba_test >= threshold).astype(int)
+    fairness_gap, subgroup_recalls = subgroup_recall_gap(X_test, y_test, pred_test)
     metrics: dict[str, Any] = {
         "auc_cv": float(search.best_score_),
         "auc_test": float(roc_auc_score(y_test, proba_test)),
@@ -253,6 +284,8 @@ def train_model(
         "recall_test": float(recall_score(y_test, pred_test)),
         "precision_test": float(precision_score(y_test, pred_test, zero_division=0)),
         "f1_test": float(f1_score(y_test, pred_test)),
+        "fairness_recall_gap_test": float(fairness_gap),
+        "subgroup_recall_test": subgroup_recalls,
         "threshold": threshold,
         "threshold_selection": "validation_cost_minimization",
         "threshold_validation_stats": threshold_stats,

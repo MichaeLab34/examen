@@ -28,6 +28,9 @@ examen/
 │   ├── training.py             # entraînement industrialisé train/validation/test
 │   ├── serving.py              # bundle modèle + fonction predict (contrat C6)
 │   ├── monitoring.py           # rapport de dérive PSI (C9)
+│   ├── operations.py           # politique Run : réentraînement + gate de promotion
+│   ├── registry.py             # aliases MLflow candidate/production/archived
+│   ├── alerting.py             # anti-spam + heartbeat des jobs planifiés
 │   ├── persistence.py          # persistance SQL + couches Bronze/Silver/Gold
 │   ├── api.py                  # API FastAPI /health /ready /predict
 │   └── cli.py                  # commandes batch et service
@@ -53,10 +56,8 @@ examen/
 ## Commandes utiles
 
 ```powershell
-# Installe l'environnement complet utile à l'examen : notebook + tests/qualité.
-# Important : avec uv, un second `uv sync --group dev` remplace l'ensemble de groupes
-# installé ; le groupe dev inclut donc notebook pour éviter de supprimer Jupyter.
-uv sync --group dev
+uv sync --group notebook                 # installe l'environnement (Python 3.13)
+uv sync --group dev                       # installe les outils de qualité et tests
 uv run jupyter lab                        # ouvre le notebook
 uv run jupyter nbconvert --to notebook --execute --inplace notebooks/decrochage_etudiant.ipynb
 uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
@@ -64,7 +65,11 @@ uv run decrochage init-db
 uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 uv run decrochage purge-expired
 uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
+uv run decrochage model-register artifacts/models/model_bundle.joblib
+uv run decrochage model-promote 1 --approve
+uv run decrochage retraining-decision reports/drift_report.json --trained-on 2025-07-01 --labels-available
 uv run decrochage serve                   # démarre l'API FastAPI
+docker compose --profile run up --build   # HTTPS + API + Postgres + Prometheus/Grafana
 uv run ruff check . ; uv run black --check . ; uv run pytest
 ```
 
@@ -73,16 +78,20 @@ uv run ruff check . ; uv run black --check . ; uv run pytest
 Le notebook reste le livrable certifiant. Le chemin production léger est porté
 par le package : entraînement avec seuil choisi sur validation, bundle joblib,
 CLI, API FastAPI, persistance SQL en architecture médaillon, Dockerfile, CI
-GitHub Actions et rapport de dérive PSI. La stack Docker Compose fournit une
-base Postgres locale ; `DECROCHAGE_DATABASE_URL` permet de viser une autre base
+GitHub Actions et rapport de dérive PSI. Le dispositif d'exploitation ajoute le cycle de vie complet :
+reverse-proxy Caddy/HTTPS, métriques Prometheus, alertes Grafana temporisées,
+heartbeat des traitements planifiés, politique annuelle de réentraînement et
+promotion/rollback par aliases MLflow avec validation humaine. La stack Docker
+Compose fournit une base Postgres locale ; `DECROCHAGE_DATABASE_URL` permet de viser une autre base
 compatible SQLAlchemy. Toute persistance BDD pseudonymise les identifiants
 directs à partir de Silver par HMAC-SHA-256 via
 `DECROCHAGE_PSEUDONYMIZATION_SECRET`; Bronze reste brut et doit donc être
 restreint, audité et purgé. Voir
 `docs/industrialisation.md`, `docs/rgpd_accountability.md`,
-`docs/model_card.md`, `docs/monitoring_plan.md`, `docs/threat_model.md`,
-`docs/competences_c1_c9.md` et `docs/evidence_portfolio.md` pour la matrice de
-couverture et le portefeuille de preuves des ajouts InduSense adaptés à l'examen.
+`docs/model_card.md`, `docs/monitoring_plan.md`, `docs/run_architecture.md`,
+`docs/runbook.md`, `docs/threat_model.md`, `docs/competences_c1_c9.md` et
+`docs/evidence_portfolio.md` pour la matrice de couverture et les preuves de
+certification.
 
 ## Données
 

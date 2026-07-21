@@ -23,8 +23,8 @@ Les figures sont dans ../artifacts/figures/ (générées par le notebook).
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Staudt Michael** · *11/07/2026* · v1.3
-Python 3.13 · scikit-learn · FastAPI · CLI · Postgres · notebook + package C1→C9
+**Staudt Michael** · *21/07/2026* · v1.3
+Python 3.13 · scikit-learn · FastAPI · Postgres · MLflow · Prometheus/Grafana · C1→C9
 
 <!--
 [0:30] Se présenter, annoncer le sujet en une phrase :
@@ -44,7 +44,7 @@ Annoncer la durée et qu'on prendra les questions à la fin.
 4. **Préparation** & anti-fuite
 5. **Modèle** : choix, entraînement, seuil
 6. **Résultats** & explicabilité
-7. **Industrialisation** : BDD médaillon, CLI, API, Docker, CI, monitoring
+7. **Industrialisation & Run** : API, Docker, registre, alertes, rollback
 8. **Limites & recommandations**
 
 <!--
@@ -130,7 +130,7 @@ colonne interdite entre dans le modèle. »
 - **Effet de marquage** : étiqueter « à risque » n'est pas neutre.
 - **RGPD** : finalité limitée (aide ≠ sanction), information, **décision humaine**
   (pas d'automatisation — art. 22).
-- **Compétence C2 appliquée** : Bronze brut restreint, Silver pseudonymisé HMAC,
+- **Protection appliquée (C2)** : Bronze brut restreint, Silver pseudonymisé HMAC,
   Gold sans identifiants directs, rétention/purge et audit `privacy_audit_log`.
 - **Secrets hors Git** : `.env` local ignoré, `.env.example` versionné.
 
@@ -297,14 +297,15 @@ JAMAIS pour prédire abandon.
 - Package `decrochage` : `training.py`, `serving.py`, `api.py`, `cli.py`,
   `persistence.py`, `monitoring.py`.
 - **Contrats industrialisés** : CLI batch, API FastAPI `/predict`, bundle rechargeable hors notebook.
-- **Qualité** : tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
+- **Cycle de vie** : registre MLflow (`candidate` → `production` → `archived`) + rollback.
+- **Observabilité** : `/metrics`, Prometheus/Grafana, alertes temporisées et heartbeat.
+- **Qualité** : 36 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
 - Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
 
 <!--
-[1:30] Montrer qu'on va « du notebook au service » : le notebook explique la
-démarche, le package exécute la chaîne réutilisable. Mentionner les commandes :
-decrochage train, predict, serve, drift-report. Le piège évité : classes custom
-importables hors __main__, donc bundle rechargeable en API/CLI.
+[1:30] Montrer qu'on va « du notebook au service puis au Run » : le notebook
+explique, le package exécute, et le registre permet de maîtriser les versions.
+Mentionner train, predict, drift-report, model-register/promote/rollback.
 -->
 
 ---
@@ -323,7 +324,7 @@ Stack locale production-like : **Postgres via Docker Compose**.
 Fallback dev : SQLite local ignoré par Git.
 
 <!--
-[1:30] Faire le lien avec C2/C7 : Bronze reste brut parce que c'est la
+[1:30] Faire le lien avec les exigences RGPD (C2/C7) : Bronze reste brut parce que c'est la
 zone de preuve et de reprise, mais elle est restreinte. Silver pseudonymise.
 Gold est la seule source de modélisation et de scoring. Mentionner la commande :
 decrochage medallion-load.
@@ -331,50 +332,91 @@ decrochage medallion-load.
 
 ---
 
-## 15. Architecture cible & contraintes — C7
+## 15. Architecture d'exploitation proportionnée — C7
 
-| Contrainte | Réponse livrée |
+**~5 200 étudiants/an · batch mi-S1 · API peu sollicitée**
+
+| Choix | Décision adaptée au projet |
 |---|---|
-| Technique | batch CLI + API FastAPI, modèle léger |
-| RGPD | décision humaine, minimisation, HMAC, rétention |
-| Éco-conception | modèle linéaire sobre |
-| Organisationnelle | explicabilité → adoption |
-| Exploitation | Docker + CI + tests + rapport PSI |
+| Hébergement | **VPS européen conteneurisé** ; serverless à réévaluer, Kubernetes écarté |
+| Sécurité réseau | **Caddy** reverse-proxy + HTTPS automatique |
+| Données | Postgres sur le VPS, sauvegarde hors hôte, secrets hors Git |
+| Disponibilité | `/health` + `/ready` ; pas de haute disponibilité sans SLA |
+| Budget indicatif | **10–20 €/mois**, +5–10 € pour un environnement de test |
 
-**Décision finale** : le score priorise l'accompagnement, il ne sanctionne pas.
+La portabilité vient des conteneurs : évoluer plus tard sans réécrire le service.
 
 <!--
-[1:30] Dessiner la chaîne à l'oral. Point clé : la DÉCISION HUMAINE est
-explicitement dans l'architecture. Citer les acteurs : réussite étudiante, DPO,
-DSI, référents pédagogiques.
+[1:30] Présenter le principe d'architecture : dimensionner pour le besoin réel.
+Le trafic est faible et rejouable : Kubernetes n'apporte rien aujourd'hui.
+Les montants sont des ordres de grandeur à confirmer par la DSI, pas des devis.
 -->
 
 ---
 
-## 16. Amélioration continue (MLOps) — C9
+## 16. Cycle de vie du modèle — C9
 
-- **Monitoring exécutable** : `decrochage drift-report` calcule le drift PSI.
-- **Suivi** : drift, performance (AUC), équité, complétude — avec
-  **seuils d'alerte chiffrés**.
-- **Persistance** : rapports dans `gold_drift_report`, scores dans `gold_prediction`.
-- **Ré-entraînement** : annuel (nouvelle promotion) + événementiel (drift).
-- **Versioning** : données + modèle + métriques dans le bundle.
-- **Gouvernance** : model card, threat model, matrice C1→C9, validation CI avant livraison.
-- **Extension production** : exporter métriques vers Prometheus/Grafana après validation DSI.
+1. **Contrôler chaque batch** : qualité + PSI (`watch` ≥ 0,10 ; `alert` ≥ 0,25).
+2. **Dérive sans labels frais** : investiguer la collecte, ne pas réentraîner à l'aveugle.
+3. **Labels de la nouvelle cohorte disponibles** : entraîner un `candidate` annuel.
+4. **Gate** : AUC ≥ 0,85 · rappel ≥ 0,90 sans régression · écart équité ≤ 10 pts.
+5. **Validation humaine obligatoire**, puis alias MLflow `production`.
+6. Si le Run se dégrade : **rollback** vers la version précédente.
 
 <!--
-[1:30] Montrer qu'on pense au CYCLE DE VIE, pas juste au modèle figé. Insister :
-les vraies étiquettes d'abandon arrivent en fin d'année → ré-entraînement annuel
-logique. Le A/B test est ce qui permettrait de PROUVER que ça marche vraiment.
+[2:00] Dans ce contexte, un réentraînement mensuel
+n'a pas de sens car la vérité terrain arrive après la cohorte. Le déclencheur
+drift ouvre une investigation ; il n'autorise un entraînement que si les labels
+frais existent. Le candidat du notebook passe le gate technique (écart F/M et
+boursier = 1,9 pt) mais reste « en attente » sans approbation humaine.
 -->
 
 ---
 
-## 17. Limites & recommandations
+## 17. Supervision et alertes — C8 / C9
+
+| Besoin | Réponse |
+|---|---|
+| Quotidien | canal d'équipe réussite étudiante / DSI |
+| Incident technique | Grafana : API indisponible ou 5xx > 1 % **pendant 5 min** |
+| Tâche silencieuse | heartbeat externe : scoring/drift/purge attendu mais absent |
+| Critique | astreinte DSI seulement pendant la fenêtre de scoring |
+
+**Hystérésis + cooldown 24 h** : une dérive persistante ne spamme pas l'équipe.
+
+<!--
+[1:30] Expliquer le dead-man's switch : un job qui ne démarre plus n'émet
+aucune erreur. Il doit donc envoyer un « je suis passé » ; l'absence du signal
+déclenche l'alerte. L'astreinte 24/7 permanente serait disproportionnée ici.
+-->
+
+---
+
+## 18. TCO & valeur du pilote — C7 / C9
+
+- **TCO** = hébergement + sauvegardes + temps DSI/DPO + revue du modèle + interventions.
+- Le coût d'infrastructure seul ne mesure pas la valeur du dispositif.
+- Formule pilote :
+  **étudiants utilement accompagnés × effet causal du dispositif**.
+- L'AUC mesure la discrimination du modèle, **pas** l'impact du tutorat.
+- Mesure attendue : pilote progressif / A-B test, capacité des tuteurs, faux positifs.
+
+> Aucun gain financier inventé : les hypothèses doivent être validées avec l'université.
+
+<!--
+[1:30] Adapter le ROI industriel au contexte éducatif. On ne dispose pas d'un
+coût officiel du décrochage ni de l'uplift causal de l'accompagnement. La bonne
+réponse est de proposer la méthode de mesure, pas de fabriquer un chiffre.
+-->
+
+---
+
+## 19. Limites & recommandations
 
 - **Données synthétiques** → AUC élevée à revalider sur données réelles.
 - **Corrélation ≠ causalité** → A/B test nécessaire avant conclusion business.
-- **Production réelle** : DPO, DPIA/AIPD, RBAC DB, coffre de secrets, dashboards, supervision.
+- **Production réelle** : DPO, DPIA/AIPD, RBAC DB, coffre de secrets, dashboards.
+- **Run réel** : confirmer le TCO avec la DSI, brancher le canal d'alerte et tester les sauvegardes.
 - **Éthique** : surveiller l'équité en continu, documenter les recours.
 - Le score **priorise**, il ne **décide** pas.
 
@@ -387,12 +429,12 @@ sur données réelles. »
 
 ---
 
-## 18. Conclusion — une démarche C1→C9
+## 20. Conclusion — du modèle au Run, C1→C9
 
 - **Rigueur anti-fuite** (3 pièges neutralisés + garde-fou).
 - **Modèle explicable** performant (AUC 0,95, rappel 95,9 %).
 - **Seuil calibré** sur le coût métier.
-- **Industrialisation livrée** (BDD médaillon + CLI + API + Docker + CI + monitoring).
+- **Run maîtrisé** : HTTPS, métriques, alertes, heartbeat, promotion humaine et rollback.
 - **RGPD documenté et implémenté** dès la persistance.
 
 **Merci — vos questions ?**
@@ -415,6 +457,11 @@ les questions avec assurance.
 - **Équité / RGPD ?** → audit sous-groupes + décision humaine + minimisation.
 - **Bronze contient du brut ?** → oui, zone restreinte de traçabilité ; Silver/Gold protègent l'usage.
 - **Drift en production ?** → `decrochage drift-report` + Gold SQL + seuils PSI + ré-entraînement.
+- **Pourquoi pas mensuel ?** → les labels d'abandon arrivent par cohorte ; drift = investigation, pas entraînement aveugle.
+- **Modèle dégradé ?** → gate rappel/AUC/équité, approbation humaine, alias MLflow et rollback.
+- **Pourquoi pas Kubernetes ?** → faible volume, batch rejouable ; VPS conteneurisé proportionné.
+- **Job qui ne tourne plus ?** → heartbeat externe : l'absence de ping déclenche l'alerte.
+- **ROI ?** → TCO chiffré, valeur mesurée par pilote causal ; aucun gain inventé à partir de l'AUC.
 
 <!--
 Slide de secours, à ne PAS présenter : à garder sous la main pendant les 30 min

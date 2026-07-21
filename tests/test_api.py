@@ -69,3 +69,37 @@ def test_predict_requires_api_key_when_configured(monkeypatch) -> None:
     response = client.post("/predict", json={"records": [{"filiere": "Informatique"}]})
 
     assert response.status_code == 401
+
+
+def test_metrics_endpoint_is_exposed(monkeypatch) -> None:
+    monkeypatch.setenv("DECROCHAGE_MODEL_PATH", "missing/model.joblib")
+    client = TestClient(create_app())
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "http_requests_total" in response.text
+
+
+def test_admin_reload_requires_key_and_replaces_bundle(monkeypatch) -> None:
+    monkeypatch.setenv("DECROCHAGE_MODEL_PATH", "missing/model.joblib")
+    monkeypatch.setenv("DECROCHAGE_API_KEY", "secret")
+    app = create_app()
+    replacement = ModelBundle(
+        pipeline=DummyPipeline(),
+        feature_cols=["taux_rendu_devoirs"],
+        threshold=0.5,
+    )
+    monkeypatch.setattr(
+        "decrochage.api.load_configured_bundle",
+        lambda: (replacement, None, "2", "models:/decrochage-l1@production"),
+    )
+    client = TestClient(app)
+
+    unauthorized = client.post("/admin/reload")
+    response = client.post("/admin/reload", headers={"X-API-Key": "secret"})
+
+    assert unauthorized.status_code == 401
+    assert response.status_code == 200
+    assert response.json()["model_version"] == "2"
+    assert app.state.bundle is replacement

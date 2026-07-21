@@ -27,7 +27,18 @@ sanction, orient or label a student without human review.
 
 The notebook reports ROC AUC, precision, recall, F1, confusion matrix and
 business-threshold analysis. The package training path selects the threshold on
-validation data and reserves test data for final reporting.
+validation data and reserves test data for final reporting. Training metadata
+also records the maximum recall gap observed across monitored `sexe` and
+`boursier` subgroups.
+
+## Model Lifecycle
+
+New bundles enter MLflow as `candidate`. Promotion to `production` is blocked
+unless test AUC is at least 0.85, recall is at least 0.90 and does not regress
+against the current production model, and the monitored subgroup recall gap is
+at most 10 points. Passing the technical gate is insufficient: a human reviewer
+must still approve the model. The previous version remains reachable for
+rollback through the `archived` alias.
 
 ## Limitations
 

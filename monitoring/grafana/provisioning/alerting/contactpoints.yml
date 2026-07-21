@@ -1,0 +1,11 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: equipe-reussite-etudiante
+    receivers:
+      - uid: equipe-reussite-webhook
+        type: webhook
+        settings:
+          url: $DECROCHAGE_ALERT_WEBHOOK_URL
+          httpMethod: POST

@@ -14,7 +14,16 @@ class HealthResponse(BaseModel):
 class ReadyResponse(BaseModel):
     ready: bool
     model_path: str | None = None
+    model_version: str | None = None
+    model_alias: str | None = None
     detail: str | None = None
+
+
+class ReloadResponse(BaseModel):
+    reloaded: bool
+    model_path: str
+    model_version: str | None = None
+    model_alias: str | None = None
 
 
 class PredictionRequest(BaseModel):

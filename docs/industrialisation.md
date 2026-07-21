@@ -25,6 +25,12 @@ monitoring.
   generates a PSI drift report. Add `--persist-db --batch-id <id>` to store the
   monitoring result in the Gold table.
 - `decrochage serve` starts the FastAPI service.
+- `decrochage retraining-decision ...` separates drift investigation from a
+  supervised retraining that requires fresh cohort labels.
+- `decrochage model-register`, `model-promote --approve` and `model-rollback`
+  implement the MLflow alias lifecycle with a human promotion gate.
+- `decrochage alert-decision` applies cooldown/hysteresis and `heartbeat`
+  signals that a scheduled batch actually completed.
 
 ## Database & Medallion Architecture
 
@@ -70,6 +76,9 @@ reports.
 - `GET /ready`: readiness, returns 200 only when the model bundle is loaded.
 - `POST /predict`: accepts raw student records and returns `proba_abandon` plus
   `alerte`.
+- `GET /metrics`: Prometheus metrics for availability, errors and latency.
+- `POST /admin/reload`: reloads the configured `production` alias without a
+  code redeployment; this route always requires `DECROCHAGE_API_KEY`.
 
 Set `DECROCHAGE_MODEL_PATH` to select the model bundle. Set
 `DECROCHAGE_API_KEY` to require an `X-API-Key` header. Set
@@ -83,6 +92,16 @@ Build and run locally:
 ```bash
 docker compose up --build
 ```
+
+Run the complete operational stack (Caddy, Prometheus and Grafana included):
+
+```bash
+docker compose --profile run up --build
+```
+
+The production recommendation, indicative TCO, alternatives and operational
+trade-offs are documented in `docs/run_architecture.md`; incident actions are
+in `docs/runbook.md`.
 
 This is intentionally a lightweight serving image: no notebook server and no
 presentation assets. Database persistence is handled by the SQLAlchemy layer and

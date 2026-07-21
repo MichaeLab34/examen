@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from decrochage.training import build_gold_dataset, select_threshold_by_cost
+from decrochage.training import build_gold_dataset, select_threshold_by_cost, subgroup_recall_gap
 
 
 def test_select_threshold_by_cost_prefers_recall_when_fn_is_expensive() -> None:
@@ -39,3 +39,14 @@ def test_build_gold_dataset_adds_canonical_split_set() -> None:
     assert feature_cols == ["taux_presence_pct"]
     assert "split_set" in gold_dataset.columns
     assert set(gold_dataset["split_set"]) <= {"train", "validation", "test"}
+
+
+def test_subgroup_recall_gap_returns_largest_monitored_gap() -> None:
+    X = pd.DataFrame({"sexe": ["F", "F", "M", "M"], "boursier": [1, 0, 1, 0]})
+    y_true = pd.Series([1, 1, 1, 1])
+    y_pred = np.array([1, 1, 1, 0])
+
+    gap, details = subgroup_recall_gap(X, y_true, y_pred)
+
+    assert gap == 0.5
+    assert details["sexe"] == {"F": 1.0, "M": 0.5}
