@@ -3,6 +3,20 @@ marp: true
 theme: default
 paginate: true
 title: "Détection précoce du décrochage étudiant — Soutenance"
+style: |
+  section {
+    font-size: 25px;
+    padding: 45px 55px;
+    justify-content: flex-start;
+  }
+  section h1 { font-size: 44px; }
+  section h2 { font-size: 33px; margin: 0 0 0.5em; }
+  section h3 { font-size: 26px; }
+  table { font-size: 0.88em; width: 100%; }
+  table th, table td { padding: 0.25em 0.5em; }
+  blockquote { font-size: 0.92em; }
+  section img { max-height: 60vh; object-fit: contain; }
+  section pre, section code { font-size: 0.8em; }
 ---
 
 <!--
@@ -13,9 +27,11 @@ Format : Marp (https://marp.app).
   - CLI     : npx @marp-team/marp-cli SUPPORT_SOUTENANCE.md --pptx   (ou --pdf)
 Chaque slide est séparée par « --- ». Les blocs de commentaires HTML sont les NOTES
 ORATEUR (deviennent les notes du présentateur en PPTX ; invisibles à l'écran).
-Cible : 30 min de présentation + 30 min de questions. ~19 slides.
-Budget temps indiqué par slide (total ≈ 28 min, garde une marge).
+Cible : 30 min de présentation + 30 min de questions. 32 slides dont 2 de backup.
+Budget temps indiqué par slide : total 27 min 45 → marge de ~2 min sur les 30 min imparties.
 Les figures sont dans ../artifacts/figures/ (générées par le notebook).
+Les chiffres cités sont ceux des outputs de notebooks/decrochage_etudiant.ipynb :
+toute modification du notebook doit être répercutée ici.
 ========================================================================
 -->
 
@@ -23,7 +39,7 @@ Les figures sont dans ../artifacts/figures/ (générées par le notebook).
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Staudt Michael** · *21/07/2026* · v1.3
+**Staudt Michael** · *25/07/2026* · v1.4
 Python 3.13 · scikit-learn · FastAPI · Postgres · MLflow · Prometheus/Grafana · C1→C9
 
 <!--
@@ -55,6 +71,30 @@ RIGUEUR anti-fuite et l'EXPLICABILITÉ, parce que ce sont des données
 
 ---
 
+## Ma démarche — et sa trace écrite
+
+**10 journées documentées**, de la découverte du sujet au bilan → `notebooks/journal_de_bord.ipynb`.
+
+| Jours | Décision structurante de la période |
+|---|---|
+| **1-3** | AUC > 0,95 au premier essai → deux fuites identifiées → **périmètre verrouillé dans le code** |
+| **4-6** | Nettoyage en module · imputation **dans** la Pipeline · **seuil choisi par coût métier** |
+| **7-9** | Package unique · médaillon + pseudonymisation · architecture · **Run vérifié dans Docker** |
+| **10** | Bilan : ce que je referais à l'identique, ce qui reste à creuser |
+
+> Chaque grande étape du notebook se termine par un encadré *JdB* : la décision **et** sa justification, écrites au moment où je les prends.
+
+<!--
+[1:00] Poser la méthode avant les résultats : le jury évalue le raisonnement
+autant que le résultat. Message : « je ne présente pas un modèle qui marche,
+je présente une suite de décisions que je peux toutes justifier — et je les ai
+écrites au fur et à mesure, pas reconstruites après coup. »
+Ne pas détailler les 10 jours : citer seulement le déclencheur du jour 1
+(l'AUC anormalement haute) qui a donné le fil rouge de tout le projet.
+-->
+
+---
+
 ## 1. Contexte & problème métier — C1
 
 - Une université observe un **fort taux d'abandon en L1** (~28 % ici).
@@ -66,7 +106,7 @@ RIGUEUR anti-fuite et l'EXPLICABILITÉ, parce que ce sont des données
 partir des seules données disponibles à mi-S1.*
 
 <!--
-[2:00] Raconter le problème comme une histoire, pas comme une fiche.
+[1:00] Raconter le problème comme une histoire, pas comme une fiche.
 Le point clé à faire passer : la contrainte « MI-S1 » conditionne tout
 (elle interdit certaines variables — j'y reviens au slide des pièges).
 « Le modèle n'est qu'une aide à la décision : l'humain garde la main. »
@@ -87,7 +127,7 @@ Deux cibles, deux usages :
 - Enrichissement : **catalogue des formations** (taux de réussite historique).
 
 <!--
-[1:30] Justifier pourquoi c'est de la CLASSIFICATION (décision oui/non
+[1:00] Justifier pourquoi c'est de la CLASSIFICATION (décision oui/non
 d'accompagner) et pas juste de la régression. La régression est un COMPLÉMENT
 pour calibrer l'intensité. Question jury probable : « pourquoi pas prédire
 seulement la note ? » → parce que la décision métier est binaire.
@@ -110,7 +150,7 @@ seulement la note ? » → parce que la décision métier est binaire.
 > 🔒 Périmètre de scoring **codé et verrouillé** + garde-fou `assert_no_leakage`.
 
 <!--
-[3:00] SLIDE LA PLUS IMPORTANTE. Prendre le temps.
+[2:30] SLIDE LA PLUS IMPORTANTE. Prendre le temps.
 - Fuite de données : moyenne_finale est un résultat de FIN de semestre,
   corrélé au décrochage → l'utiliser = tricher.
 - Fuite temporelle : les résultats consolidés de fin de S1 ne sont PAS
@@ -138,7 +178,7 @@ colonne interdite entre dans le modèle. »
 minimisation · pseudonymisation · accountability.
 
 <!--
-[2:00] Montrer une vraie conscience éthique — c'est très regardé (C2 a un
+[1:30] Montrer une vraie conscience éthique — c'est très regardé (C2 a un
 questionnaire séparé). Question piège classique : « en retirant le sexe, votre
 modèle est-il non-discriminant ? » → NON, des proxys corrélés peuvent réintroduire
 un biais → d'où l'audit d'équité que je montre plus loin.
@@ -160,8 +200,11 @@ Chaîne **déterministe** et reproductible :
 
 Le notebook construit `X`, `y_clf` et `y_reg` **uniquement depuis le Gold dataset**.
 
+> ⚠️ L'**imputation vit dans la Pipeline**, pas dans le nettoyage : médiane et mode
+> sont appris sur le train seul, sinon le test fuite vers l'entraînement.
+
 <!--
-[2:00] Insister sur 3 idées défendables :
+[1:00] Insister sur 3 idées défendables :
 1. Le nettoyage est dans un MODULE → rejoué à l'identique en production.
 2. Silver pseudonymise, Gold sert réellement à entraîner/scorer.
 3. On impute DANS la pipeline (pas avant le split) sinon fuite du test.
@@ -175,10 +218,11 @@ Montrer 1-2 exemples concrets de valeurs sales (« 14.4 km »).
 ![w:560](../artifacts/figures/eda_signaux.png)
 
 - Décrocheurs = **moins de présence/LMS**, **plus de retards**, motivation basse.
-- Leurres : taux d'abandon **plat** entre modalités (écart-type ≈ 2 pts) → **aucun signal**.
+- Leurres : taux d'abandon **plat** entre modalités — écart-type **1,6 à 2,3 pts**
+  selon le leurre → **aucun signal**, je le montre au lieu de l'affirmer.
 
 <!--
-[2:00] Montrer le graphe des densités par classe (présence, LMS, rendus...).
+[1:00] Montrer le graphe des densités par classe (présence, LMS, rendus...).
 « On voit visuellement que les signaux d'engagement séparent bien les deux
 groupes. » Puis mentionner le graphe des leurres (eda_leurres.png) : « et voici
 la preuve que les leurres n'apportent rien. » Tu peux mettre eda_leurres.png en
@@ -193,11 +237,13 @@ Démarche : **baseline** → comparer 3 familles, évaluées par **AUC**.
 
 ![w:620](../artifacts/figures/roc_comparaison.png)
 
-**Retenu : régression logistique** — meilleure AUC **et** la plus explicable **et**
-la plus sobre.
+**Retenu : régression logistique** — **aucun gain d'AUC significatif** du boosting,
+et c'est le modèle le plus **explicable** et le plus **sobre**.
+
+*Arbitrage assumé : explicabilité > gain marginal non significatif.*
 
 <!--
-[2:00] Justifier AUC (insensible au seuil et au déséquilibre, contrairement à
+[1:00] Justifier AUC (insensible au seuil et au déséquilibre, contrairement à
 l'accuracy). Montrer les courbes ROC superposées. Le message : « à performance
 égale, je choisis le modèle le plus EXPLICABLE et le plus SOBRE — c'est ce
 qu'exige le contexte. » Question probable : « pourquoi pas XGBoost ? » → pas de
@@ -215,7 +261,7 @@ gain d'AUC ici, et moins explicable.
 - **AUC CV ≈ AUC test** → pas de surapprentissage visible.
 
 <!--
-[1:30] Rassurer sur la robustesse : le fait que l'AUC en validation croisée
+[1:00] Rassurer sur la robustesse : le fait que l'AUC en validation croisée
 égale l'AUC sur le test hold-out prouve qu'on ne surapprend pas. Expliquer
 pourquoi pondération plutôt que SMOTE : préserve la calibration des probabilités.
 Point important : le test final n'a pas servi à choisir le seuil.
@@ -232,7 +278,7 @@ Point important : le test final n'a pas servi à choisir le seuil.
 - Résultat test : **rappel 95,9 %** (on rate très peu de décrocheurs), précision **63,5 %**.
 
 <!--
-[2:00] C'est un slide qui impressionne : montrer qu'on ne prend pas 0,5 par
+[1:30] C'est un slide qui impressionne : montrer qu'on ne prend pas 0,5 par
 défaut mais qu'on OPTIMISE un coût métier sur validation. Assumer que le ratio 5:1 est une
 hypothèse à valider avec la direction. Lien direct avec l'objectif : ne pas
 laisser des étudiants décrocher.
@@ -251,7 +297,7 @@ laisser des étudiants décrocher.
 | Précision | 0,64 |
 
 <!--
-[1:30] Lire la matrice de confusion : « au seuil retenu, je détecte 96 % des
+[1:00] Lire la matrice de confusion : « au seuil retenu, je détecte 96 % des
 futurs décrocheurs. » Assumer la précision plus basse (64 %) : c'est un choix —
 mieux vaut quelques accompagnements en trop qu'un décrocheur raté. Coût d'un FN
 >> coût d'un FP.
@@ -264,10 +310,11 @@ mieux vaut quelques accompagnements en trop qu'un décrocheur raté. Coût d'un 
 ![w:520](../artifacts/figures/shap_summary.png)
 
 - Facteurs **actionnables** : présence, LMS, rendus, motivation.
-- **Audit d'équité** : rappel comparable F/M/boursier (**0,935–0,975**).
+- **Audit d'équité** : rappel comparable F/M/boursier (**0,935–0,975**) →
+  écart maximal **1,9 pt**, très en deçà du seuil d'alerte de **10 pts**.
 
 <!--
-[2:00] Deux messages : (1) le modèle n'est pas une boîte noire — SHAP et
+[1:00] Deux messages : (1) le modèle n'est pas une boîte noire — SHAP et
 l'importance des variables montrent des facteurs sur lesquels on peut AGIR
 (relance, tutorat). (2) J'ai vérifié l'équité entre sous-groupes sensibles :
 pas d'écart marqué. Tu peux aussi montrer importance_permutation.png.
@@ -284,7 +331,7 @@ pas d'écart marqué. Tu peux aussi montrer importance_permutation.png.
 - Reste **exclue des features** de classification (fuite).
 
 <!--
-[1:00] Court. Montrer que la régression est utile pour NUANCER (soutien léger vs
+[0:45] Court. Montrer que la régression est utile pour NUANCER (soutien léger vs
 renforcé), sans prétendre prédire une note exacte. Rappeler qu'on ne s'en sert
 JAMAIS pour prédire abandon.
 -->
@@ -300,11 +347,11 @@ JAMAIS pour prédire abandon.
 - **Sécurité API** : clé, limite de débit, requêtes corrélées sans journaliser les données.
 - **Cycle de vie** : runs MLflow (paramètres, métriques, artefacts), registre + rollback.
 - **Observabilité** : `/metrics`, dashboard Grafana provisionné, alertes et heartbeat.
-- **Qualité** : 48 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
+- **Qualité** : 52 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
 - Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
 
 <!--
-[1:30] Montrer qu'on va « du notebook au service puis au Run » : le notebook
+[1:00] Montrer qu'on va « du notebook au service puis au Run » : le notebook
 explique, le package exécute, et le registre permet de maîtriser les versions.
 Mentionner train, predict, drift-report, model-register/promote/rollback.
 -->
@@ -325,7 +372,7 @@ Stack locale production-like : **Postgres via Docker Compose**.
 Fallback dev : SQLite local ignoré par Git.
 
 <!--
-[1:30] Faire le lien avec les exigences RGPD (C2/C7) : Bronze reste brut parce que c'est la
+[1:00] Faire le lien avec les exigences RGPD (C2/C7) : Bronze reste brut parce que c'est la
 zone de preuve et de reprise, mais elle est restreinte. Silver pseudonymise.
 Gold est la seule source de modélisation et de scoring. Mentionner la commande :
 decrochage medallion-load.
@@ -348,7 +395,7 @@ decrochage medallion-load.
 La portabilité vient des conteneurs : évoluer plus tard sans réécrire le service.
 
 <!--
-[1:30] Présenter le principe d'architecture : dimensionner pour le besoin réel.
+[1:00] Présenter le principe d'architecture : dimensionner pour le besoin réel.
 Le trafic est faible et rejouable : Kubernetes n'apporte rien aujourd'hui.
 Les montants sont des ordres de grandeur à confirmer par la DSI, pas des devis.
 -->
@@ -369,7 +416,7 @@ annuelle reste un déclencheur. Un
 redémarrage le même jour ne crée pas de doublon.
 
 <!--
-[2:00] Dans ce contexte, un réentraînement mensuel
+[1:00] Dans ce contexte, un réentraînement mensuel
 n'a pas de sens car la vérité terrain arrive après la cohorte. Le déclencheur
 drift ouvre une investigation ; il n'autorise un entraînement que si les labels
 frais existent. Le candidat du notebook passe le gate technique (écart F/M et
@@ -391,7 +438,7 @@ boursier = 1,9 pt) mais reste « en attente » sans approbation humaine.
 **Hystérésis + cooldown 24 h** : une dérive persistante ne spamme pas l'équipe.
 
 <!--
-[1:30] Expliquer le dead-man's switch : un job qui ne démarre plus n'émet
+[1:00] Expliquer le dead-man's switch : un job qui ne démarre plus n'émet
 aucune erreur. Il doit donc envoyer un « je suis passé » ; l'absence du signal
 déclenche l'alerte. L'astreinte 24/7 permanente serait disproportionnée ici.
 -->
@@ -405,38 +452,53 @@ déclenche l'alerte. L'astreinte 24/7 permanente serait disproportionnée ici.
 - Disponibilité, débit par route, erreurs 5xx et latence p95 sont visibles en conditions réelles.
 - Les mesures proviennent de l'API conteneurisée et de Prometheus, pas de sorties calculées dans le notebook.
 
----
-
-## 17.2 Prometheus collecte, Grafana alerte
-
-![Cible API active dans Prometheus](screenshots/docker/prometheus-targets.png)
-
-![Règles d'alerte provisionnées dans Grafana](screenshots/docker/grafana-alert-rules.png)
-
-- Prometheus confirme que la cible `decrochage-api` est collectée sur `/metrics` avec l'état `UP`.
-- Grafana évalue deux règles provisionnées : indisponibilité de l'API et taux d'erreurs 5xx supérieur à 1 %.
-
----
-
-## 17.3 Caddy expose l'API en HTTPS
-
-![Documentation Swagger chargée via Caddy en HTTPS](screenshots/docker/caddy-https-api.png)
-
-- Caddy termine HTTPS et transmet les requêtes au conteneur API.
-- Le certificat est local pour la démonstration ; un domaine et un certificat gérés seraient requis en production.
-
-> Ces preuves ne peuvent pas être produites par le notebook seul : Caddy, Prometheus et Grafana sont des processus réseau indépendants, exécutés dans la stack Docker et vérifiés depuis un navigateur.
-
 <!--
-[1:00] Montrer que le notebook prouve la démarche analytique, tandis que ces
-captures prouvent l'exploitation réelle : HTTPS, collecte périodique, dashboard
-et évaluation continue des alertes. Les captures ont été réalisées sur la stack
-Docker locale avec Playwright.
+[2:00] BLOC DE 6 CAPTURES — les faire défiler d'un trait, sans commenter chacune.
+Un seul message : « ces preuves ne peuvent pas sortir d'un notebook, ce sont des
+processus réseau, vérifiés dans la stack Docker avec Playwright. »
+Ne détailler (Prometheus UP, 2 règles Grafana, rollback MLflow, log JSON borné)
+que si le jury pose la question.
 -->
 
 ---
 
-## 17.4 MLflow trace les entraînements
+## 17.2 Prometheus collecte l'API
+
+![Cible API active dans Prometheus](screenshots/docker/prometheus-targets.png)
+
+- La cible `decrochage-api` est collectée sur `/metrics`, état `UP`.
+
+---
+
+## 17.3 Grafana évalue les alertes
+
+![Règles d'alerte provisionnées dans Grafana](screenshots/docker/grafana-alert-rules.png)
+
+- Deux règles provisionnées : indisponibilité de l'API, taux d'erreurs 5xx > 1 %.
+
+---
+
+<style scoped>
+section img { max-height: 44vh; }
+</style>
+
+## 17.4 Caddy expose l'API en HTTPS
+
+![Documentation Swagger chargée via Caddy en HTTPS](screenshots/docker/caddy-https-api.png)
+
+- Caddy termine HTTPS et transmet les requêtes au conteneur API.
+- Certificat local pour la démonstration ; domaine et certificat gérés en production.
+
+> Ces preuves ne peuvent pas sortir du notebook seul : Caddy, Prometheus et Grafana sont des processus réseau indépendants.
+
+<!--
+Le notebook prouve la démarche analytique ; ces captures prouvent l'exploitation
+réelle : HTTPS, collecte périodique, dashboard et évaluation continue des alertes.
+-->
+
+---
+
+## 17.5 MLflow trace les entraînements
 
 ![Deux runs terminés dans l'expérience MLflow](screenshots/docker/mlflow-runs.png)
 
@@ -445,7 +507,7 @@ Docker locale avec Playwright.
 
 ---
 
-## 17.5 Versions, promotion et rollback
+## 17.6 Versions, promotion et rollback
 
 ![Registre MLflow après rollback](screenshots/docker/mlflow-registry.png)
 
@@ -455,7 +517,7 @@ Docker locale avec Playwright.
 
 ---
 
-## 17.6 Journaux JSON corrélés et bornés
+## 17.7 Journaux JSON corrélés et bornés
 
 ```json
 {"timestamp":"2026-07-21T14:05:24+00:00","level":"INFO","event":"api_request","request_id":"jury-log-proof-001","method":"GET","path":"/health","status":200,"duration_ms":2.45}
@@ -466,7 +528,7 @@ Docker locale avec Playwright.
 - Rotation Docker : **10 Mo par fichier, 5 fichiers conservés**.
 
 <!--
-[1:30] Montrer l'interface MLflow : deux runs, paramètres, métriques et artefacts.
+Montrer l'interface MLflow : deux runs, paramètres, métriques et artefacts.
 Puis montrer le registre : la version 1 est revenue en production après rollback.
 Conclure avec le log JSON corrélé et la rétention locale bornée.
 -->
@@ -485,14 +547,38 @@ Conclure avec le log JSON corrélé et la rétention locale bornée.
 > Aucun gain financier inventé : les hypothèses doivent être validées avec l'université.
 
 <!--
-[1:30] Adapter le ROI industriel au contexte éducatif. On ne dispose pas d'un
+[1:00] Adapter le ROI industriel au contexte éducatif. On ne dispose pas d'un
 coût officiel du décrochage ni de l'uplift causal de l'accompagnement. La bonne
 réponse est de proposer la méthode de mesure, pas de fabriquer un chiffre.
 -->
 
 ---
 
-## 19. Limites & recommandations
+## 19. Les arbitrages — ce que j'ai failli faire
+
+| Réflexe de départ | Pourquoi je ne l'ai pas suivi |
+|---|---|
+| Garder `moyenne_partiels_s1` (« c'est du S1 ! ») | consolidée en **fin** de S1 → vide au moment du scoring |
+| Imputer avant le split | la médiane du jeu entier fait fuiter le test vers le train |
+| Prendre **XGBoost** (réflexe tabulaire) | aucun gain d'AUC significatif, et coefficients illisibles |
+| Laisser le seuil à **0,5** | suppose FN = FP ; ici le coût réel est **5:1** |
+| Réentraîner **tous les mois** | les labels d'abandon n'arrivent qu'après la cohorte |
+| Traduire l'AUC en **euros économisés** | l'AUC mesure la discrimination, pas l'effet du tutorat |
+| Déployer sur **Kubernetes** | 5 200 étudiants/an : un VPS conteneurisé suffit |
+
+> Chacun de ces arbitrages est daté et justifié dans le journal de bord.
+
+<!--
+[1:30] LE slide qui répond à « le raisonnement compte autant que le résultat ».
+Ne pas tout lire : en développer 2 ou 3 (la fuite temporelle, le seuil, le
+réentraînement mensuel) et laisser le tableau parler pour le reste.
+Message : « à chaque fois, le réflexe courant aurait donné un chiffre plus
+flatteur ou une archi plus impressionnante — et un dispositif moins valide. »
+-->
+
+---
+
+## 20. Limites & recommandations
 
 - **Données synthétiques** → AUC élevée à revalider sur données réelles.
 - **Corrélation ≠ causalité** → A/B test nécessaire avant conclusion business.
@@ -502,7 +588,7 @@ réponse est de proposer la méthode de mesure, pas de fabriquer un chiffre.
 - Le score **priorise**, il ne **décide** pas.
 
 <!--
-[1:30] Montrer de la lucidité — le jury valorise un candidat qui connaît les
+[1:00] Montrer de la lucidité — le jury valorise un candidat qui connaît les
 limites de son travail. NE PAS survendre. « Ce que j'ai construit est une
 démarche solide et reproductible ; sa validité en production reste à confirmer
 sur données réelles. »
@@ -510,7 +596,7 @@ sur données réelles. »
 
 ---
 
-## 20. Conclusion — du modèle au Run, C1→C9
+## 21. Conclusion — du modèle au Run, C1→C9
 
 - **Rigueur anti-fuite** (3 pièges neutralisés + garde-fou).
 - **Modèle explicable** performant (AUC 0,95, rappel 95,9 %).
@@ -547,4 +633,32 @@ les questions avec assurance.
 <!--
 Slide de secours, à ne PAS présenter : à garder sous la main pendant les 30 min
 de questions. Prépare 1-2 phrases pour chacune à l'avance.
+-->
+
+---
+
+<!-- _paginate: false -->
+<style scoped>
+table { font-size: 0.74em; }
+</style>
+
+## Backup — traçabilité C1 → C9
+
+| Compétence | Preuve | Où |
+|---|---|---|
+| **C1** Cadrage & données | besoin, deux cibles, sources, gouvernance | notebook §2-3 + *JdB* |
+| **C2** Éthique & conformité | proxys, RGPD, art. 22, audit d'équité | notebook §4 · §12.4 · `docs/rgpd_accountability.md` |
+| **C3** Préparation | dédoublonnage, parsing, imputation Pipeline, features | notebook §5-7 · `preprocessing.py` · `features.py` |
+| **C4** Choix du modèle | baseline + 3 familles, ROC/AUC, sobriété | notebook §8 |
+| **C5** Entraînement | split 3 voies, CV stratifiée, seuil par coût | notebook §9 · `training.py` |
+| **C6** Implémentation | bundle joblib, CLI, API FastAPI, contrat I/O | notebook §10 · `serving.py` · `api.py` |
+| **C7** Architecture | médaillon, contraintes, dimensionnement, TCO | notebook §11 · `ARCHITECTURE_PROJET.md` |
+| **C8** Performance & impacts | AUC/rappel/F1, SHAP, équité, régression | notebook §12 |
+| **C9** Amélioration continue | PSI, politique de réentraînement, MLflow, alertes | notebook §13 · `monitoring.py` · `operations.py` |
+
+Journal de bord : `notebooks/journal_de_bord.ipynb` — 10 journées datées.
+
+<!--
+Slide de secours pour un jury qui coche un référentiel : permet de pointer
+immédiatement la preuve demandée. À ne pas présenter spontanément.
 -->
