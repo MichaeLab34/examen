@@ -27,7 +27,7 @@ Format : Marp (https://marp.app).
   - CLI     : npx @marp-team/marp-cli SUPPORT_SOUTENANCE.md --pptx   (ou --pdf)
 Chaque slide est séparée par « --- ». Les blocs de commentaires HTML sont les NOTES
 ORATEUR (deviennent les notes du présentateur en PPTX ; invisibles à l'écran).
-Cible : 30 min de présentation + 30 min de questions. 34 slides dont 2 de backup.
+Cible : 30 min de présentation + 30 min de questions. 35 slides dont 2 de backup.
 Budget temps indiqué par slide : total 28 min 45 → marge de ~1 min sur les 30 min imparties.
 Les figures sont dans ../artifacts/figures/ (générées par le notebook).
 Les chiffres cités sont ceux des outputs de notebooks/decrochage_etudiant.ipynb :
@@ -262,24 +262,45 @@ Le coût de calcul est **mesuré** pendant la comparaison (CodeCarbon, mix fran�
 | XGBoost | **× 12** | 0,948 | **∞** (aucun gain) |
 | Random Forest | **× 23** | 0,942 | **∞** (aucun gain) |
 
-**Les 6 leviers, par impact réel** — et le modèle n'est que le deuxième :
-
-**1.** Réentraînement **annuel** et non mensuel → 11 entraînements évités par an  
-**2.** Modèle **linéaire** : ni GPU ni cluster · **3.** Pas de **Kubernetes** (§15)  
-**4.** **Minimisation** des features (31) · **5.** Scoring **par batch**, pas de temps réel  
-**6.** **Purge** des lots expirés à échéance
-
-> Total mesuré pour toute la comparaison : **0,022 Wh**. La sobriété se joue sur la
-> fréquence, pas sur l'algorithme.
+> Total mesuré pour toute la comparaison : **0,022 Wh**. Dérisoire dans l'absolu :
+> la sobriété se joue ailleurs que sur l'algorithme → slide suivante.
 
 <!--
-[1:00] Point souvent survolé : je l'ai MESURÉ au lieu de l'affirmer. Deux messages.
-(1) Le boosting coûte 12 à 23 fois plus cher pour zéro gain : le coût par point
-d'AUC est infini, l'arbitrage est tranché par les chiffres, pas par une préférence.
-(2) Honnêteté : 0,022 Wh, c'est dérisoire. Le vrai levier est la FRÉQUENCE de
-réentraînement et le dimensionnement — dire l'inverse serait du green-washing.
+[0:45] Point souvent survolé : je l'ai MESURÉ au lieu de l'affirmer.
+Message : le boosting coûte 12 à 23 fois plus cher pour zéro gain — le coût par
+point d'AUC est infini, l'arbitrage est tranché par les chiffres et non par une
+préférence personnelle.
 Limite à assumer si on questionne : sous Windows la mesure CPU est approximative,
 elle sert à comparer les modèles entre eux, pas à publier une empreinte absolue.
+Enchaîner tout de suite sur les leviers : 0,022 Wh, ce n'est pas là que ça se joue.
+-->
+
+---
+
+<style scoped>
+table { font-size: 0.78em; }
+</style>
+
+## 7.2 Les 6 leviers d'éco-conception — C4 / C7
+
+| Levier | Décision prise | Effet |
+|---|---|---|
+| **1. Fréquence de réentraînement** | annuelle, par cohorte — pas mensuelle (§16) | **~11 entraînements évités par an** |
+| **2. Choix du modèle** | régression logistique plutôt que boosting | entraînement et inférence négligeables, pas de GPU |
+| **3. Dimensionnement** | VPS conteneurisé, pas de Kubernetes (§15) | pas de cluster inactif à alimenter |
+| **4. Minimisation des données** | 31 features ; texte libre réduit à un booléen | moins de stockage et de calcul, moins de risque RGPD |
+| **5. Rythme de scoring** | un batch par semestre, pas de temps réel | pas de service de scoring permanent sous charge |
+| **6. Rétention** | purge automatique des lots expirés (§14) | stockage borné dans le temps |
+
+> **Quatre leviers sur six** relèvent de l'architecture et de l'exploitation, pas de la modélisation — et deux d'entre eux (4 et 6) servent aussi le RGPD.
+
+<!--
+[0:45] LE message de la séquence éco-conception : le levier le plus fort n'est pas
+l'algorithme mais le fait de NE PAS RECALCULER ce qui n'a pas besoin de l'être.
+Mensuel → annuel = 11 entraînements complets économisés ; changer d'algorithme
+économise un facteur 12 sur quelques secondes. Ce n'est pas le même ordre.
+Si le jury enchaîne sur le RGPD : les leviers 4 et 6 réduisent à la fois
+l'empreinte et la surface de données personnelles.
 -->
 
 ---
@@ -363,7 +384,7 @@ pas d'écart marqué. Tu peux aussi montrer importance_permutation.png.
 - Reste **exclue des features** de classification (fuite).
 
 <!--
-[0:45] Court. Montrer que la régression est utile pour NUANCER (soutien léger vs
+[0:30] Court. Montrer que la régression est utile pour NUANCER (soutien léger vs
 renforcé), sans prétendre prédire une note exacte. Rappeler qu'on ne s'en sert
 JAMAIS pour prédire abandon.
 -->
@@ -470,7 +491,7 @@ boursier = 1,9 pt) mais reste « en attente » sans approbation humaine.
 **Hystérésis + cooldown 24 h** : une dérive persistante ne spamme pas l'équipe.
 
 <!--
-[1:00] Expliquer le dead-man's switch : un job qui ne démarre plus n'émet
+[0:45] Expliquer le dead-man's switch : un job qui ne démarre plus n'émet
 aucune erreur. Il doit donc envoyer un « je suis passé » ; l'absence du signal
 déclenche l'alerte. L'astreinte 24/7 permanente serait disproportionnée ici.
 -->
