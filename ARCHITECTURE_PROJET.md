@@ -54,7 +54,7 @@ examen/
 ├── artifacts/
 │   ├── models/                 # model_bundle.joblib
 │   └── figures/                # PNG exportés par le notebook
-└── reports/                    # énoncé, support de soutenance
+└── reports/                    # énoncé, slides + conducteur de soutenance
 ```
 
 ## Diagramme d'architecture (ingestion → features → inférence → restitution)

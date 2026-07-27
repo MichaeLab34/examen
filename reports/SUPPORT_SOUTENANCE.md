@@ -1,732 +1,286 @@
----
-marp: true
-theme: default
-paginate: true
-title: "Détection précoce du décrochage étudiant — Soutenance"
-style: |
-  section {
-    font-size: 25px;
-    padding: 45px 55px;
-    justify-content: flex-start;
-  }
-  section h1 { font-size: 44px; }
-  section h2 { font-size: 33px; margin: 0 0 0.5em; }
-  section h3 { font-size: 26px; }
-  table { font-size: 0.88em; width: 100%; }
-  table th, table td { padding: 0.25em 0.5em; }
-  blockquote { font-size: 0.92em; }
-  section img { max-height: 60vh; object-fit: contain; }
-  section pre, section code { font-size: 0.8em; }
----
+# 🎤 Conducteur de soutenance
 
-<!--
-========================================================================
-SUPPORT DE SOUTENANCE — à convertir en PDF ou PPTX.
-Format : Marp (https://marp.app).
-  - VS Code : extension « Marp for VS Code » → clic droit → Export slide deck → PDF/PPTX.
-  - CLI     : npx @marp-team/marp-cli SUPPORT_SOUTENANCE.md --pptx   (ou --pdf)
-Chaque slide est séparée par « --- ». Les blocs de commentaires HTML sont les NOTES
-ORATEUR (deviennent les notes du présentateur en PPTX ; invisibles à l'écran).
-Cible : 30 min de présentation + 30 min de questions. 35 slides dont 2 de backup.
-Budget temps indiqué par slide : total 28 min 45 → marge de ~1 min sur les 30 min imparties.
-Les figures sont dans ../artifacts/figures/ (générées par le notebook).
-Les chiffres cités sont ceux des outputs de notebooks/decrochage_etudiant.ipynb :
-toute modification du notebook doit être répercutée ici.
-========================================================================
--->
+**Détection précoce du décrochage étudiant en L1** — Staudt Michael
+30 min de présentation + 30 min de questions · 35 slides · budget 28 min 45
 
-# Détection précoce du décrochage étudiant en L1
-
-### Concevoir et implémenter une solution d'IA — soutenance de certification
-
-**Staudt Michael** · *27/07/2026* · v1.5
-Python 3.13 · scikit-learn · FastAPI · Postgres · MLflow · Prometheus/Grafana · C1→C9
-
-📦 **Code, tests et documentation** : [github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)
-
-<!--
-[0:30] Se présenter, annoncer le sujet en une phrase :
-« Je vous présente une solution d'IA qui détecte, dès le milieu du premier
-semestre, les étudiants de L1 en risque de décrochage, pour prioriser
-l'accompagnement — de façon explicable et conforme au RGPD. »
-Annoncer la durée et qu'on prendra les questions à la fin.
--->
+> Ce document est **mon** outil, pas un livrable. Il sert à dérouler
+> `SUPPORT_SOUTENANCE.pptx` sans me perdre : où j'en suis dans le temps, quoi dire,
+> quels chiffres citer, quoi ne pas dire. Les slides sont générées depuis
+> [`soutenance_slides.md`](soutenance_slides.md).
 
 ---
 
-## Fil conducteur
+## ⏱️ Contrôle du temps — mes 4 repères
 
-1. **Problème & cadrage** métier
-2. **Données** et les 3 pièges à éviter
-3. **Éthique & RGPD**
-4. **Préparation** & anti-fuite
-5. **Modèle** : choix, **coût de calcul**, entraînement, seuil
-6. **Résultats** & explicabilité
-7. **Industrialisation & Run** : API, Docker, registre, alertes, rollback
-8. **Limites & recommandations**
+Je ne surveille pas 35 slides, je surveille **4 points de passage**. Si j'y suis, tout va bien.
 
-<!--
-[0:30] Donner la carte. Insister : « le fil rouge de ma démarche, c'est la
-RIGUEUR anti-fuite et l'EXPLICABILITÉ, parce que ce sont des données
-étudiantes sensibles. » Ne pas lire les 8 points un à un.
--->
-
----
-
-## Ma démarche — et sa trace écrite
-
-**10 journées documentées + un bilan final** → `notebooks/journal_de_bord.ipynb`.
-
-| Jours | Décision structurante de la période |
-|---|---|
-| **1-3** | AUC > 0,95 au premier essai → deux fuites identifiées → **périmètre verrouillé dans le code** |
-| **4-6** | Nettoyage en module · imputation **dans** la Pipeline · **seuil choisi par coût métier** |
-| **7-9** | Package unique · médaillon + pseudonymisation · architecture · **Run vérifié dans Docker** |
-| **10** | Relecture à froid → **mesurer** le coût de calcul au lieu de l'affirmer |
-| **Bilan** | Ce que je referais à l'identique, ce qui reste à creuser |
-
-> Chaque grande étape du notebook se termine par un encadré *JdB* : la décision **et** sa justification, écrites au moment où je les prends.
-
-<!--
-[1:00] Poser la méthode avant les résultats : le jury évalue le raisonnement
-autant que le résultat. Message : « je ne présente pas un modèle qui marche,
-je présente une suite de décisions que je peux toutes justifier — et je les ai
-écrites au fur et à mesure, pas reconstruites après coup. »
-Ne pas détailler les 10 jours : citer seulement le déclencheur du jour 1
-(l'AUC anormalement haute) qui a donné le fil rouge de tout le projet.
--->
-
----
-
-## 1. Contexte & problème métier — C1
-
-- Une université observe un **fort taux d'abandon en L1** (~28 % ici).
-- Besoin : **agir tôt** (mi-S1) avec des ressources limitées (tuteurs, aides).
-- Aujourd'hui : repérage **trop tardif** (après les partiels).
-
-**Problématique métier** : *quels étudiants accompagner en priorité, dès mi-S1 ?*
-**Problématique IA** : *estimer une probabilité de décrochage, explicable, à
-partir des seules données disponibles à mi-S1.*
-
-<!--
-[1:00] Raconter le problème comme une histoire, pas comme une fiche.
-Le point clé à faire passer : la contrainte « MI-S1 » conditionne tout
-(elle interdit certaines variables — j'y reviens au slide des pièges).
-« Le modèle n'est qu'une aide à la décision : l'humain garde la main. »
--->
-
----
-
-## 2. Objectif IA & cadrage — C1
-
-Deux cibles, deux usages :
-
-| Cible | Type | Usage |
+| À la minute… | je dois être sur… | sinon |
 |---|---|---|
-| `abandon` (0/1) | **Classification** (principale) | Prioriser l'accompagnement — ROC/AUC |
-| `moyenne_finale` (/20) | **Régression** (secondaire) | Calibrer l'intensité de l'aide |
+| **6:30** | slide 6 — *les 3 pièges* | je suis parti trop lentement, j'accélère sur 4-5 |
+| **15:00** | slide 14 — *choix du seuil* | je coupe 17.2 à 17.7 (bloc captures) |
+| **22:00** | slide 22 — *supervision* | je saute 18 (TCO) et 20 (limites) au minimum |
+| **28:45** | slide 33 — *conclusion* | — |
 
-- Sortie = un **score de risque** + une **alerte** (seuil), pas un verdict.
-- Enrichissement : **catalogue des formations** (taux de réussite historique).
-
-<!--
-[1:00] Justifier pourquoi c'est de la CLASSIFICATION (décision oui/non
-d'accompagner) et pas juste de la régression. La régression est un COMPLÉMENT
-pour calibrer l'intensité. Question jury probable : « pourquoi pas prédire
-seulement la note ? » → parce que la décision métier est binaire.
--->
+**Slides sacrifiables sans dommage**, dans cet ordre : 17.2→17.7 (garder seulement
+17.1), puis 12 (régression), puis 18 (TCO), puis 14 (médaillon).
+**Slides intouchables** : 6 (pièges), 14 (seuil), 19 (arbitrages), 33 (conclusion).
 
 ---
 
-## 3. Les données et les 3 PIÈGES — C1 / C3
+## 🎯 Les 3 messages à faire passer coûte que coûte
 
-~5 200 étudiants, 33 colonnes, volontairement **« brutes »**.
+Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramène.
 
-| Piège | Colonnes | Décision |
+1. **La validité avant la performance.** J'ai identifié deux fuites, je les ai
+   verrouillées *dans le code*, et je peux le prouver.
+2. **Chaque décision est arbitrée, pas subie.** Le seuil, le modèle, la fréquence de
+   réentraînement, l'infrastructure : à chaque fois j'ai écarté le réflexe courant
+   pour une raison que je sais défendre.
+3. **Le score propose, l'humain décide.** Sur des données étudiantes, c'est une
+   position éthique et réglementaire, pas une précaution de langage.
+
+---
+
+## 🔢 Antisèche des chiffres
+
+À citer sans hésiter. Si un chiffre m'échappe, je dis « de l'ordre de » plutôt que d'inventer.
+
+| Sujet | Valeur | Où |
 |---|---|---|
-| **Fuite de données** | `moyenne_finale` | exclue des features |
-| **Fuite temporelle** | `moyenne_partiels_s1`, `nb_ue_validees_s1` | hors périmètre mi-S1 |
-| **Leurres** | `groupe_td`, `couleur_carte_etudiante`, `jour_inscription` | prouvés inutiles, exclus |
-
-+ exclure identifiants, constantes, texte libre brut.
-
-> 🔒 Périmètre de scoring **codé et verrouillé** + garde-fou `assert_no_leakage`.
-
-<!--
-[2:30] SLIDE LA PLUS IMPORTANTE. Prendre le temps.
-- Fuite de données : moyenne_finale est un résultat de FIN de semestre,
-  corrélé au décrochage → l'utiliser = tricher.
-- Fuite temporelle : les résultats consolidés de fin de S1 ne sont PAS
-  disponibles à mi-S1 → performance flatteuse mais modèle inutilisable.
-- Leurres : je ne me contente pas de les retirer, je PROUVE (EDA) qu'ils
-  n'ont pas de signal.
-Conclure : « et pour ne jamais me tromper, j'ai un garde-fou qui plante si une
-colonne interdite entre dans le modèle. »
--->
+| Volume | ~5 200 étudiants · 33 colonnes · 40 doublons retirés | slide 6 |
+| Taux d'abandon | **~28 %** (classe minoritaire) | slide 4 |
+| Features retenues | **31** après verrouillage anti-fuite | slide 6 |
+| AUC test | **0,949** | slide 15 |
+| Seuil retenu | **0,30** (et non 0,5) | slide 14 |
+| Rappel au seuil | **95,9 %** · précision **63,5 %** | slide 14-15 |
+| Coût métier | **FN:FP = 5:1** — hypothèse assumée | slide 14 |
+| Équité | écart de rappel **1,9 pt** (alerte à 10 pts) | slide 16 |
+| Régression | R² ≈ **0,68**, erreur ≈ **2,3 pts/20** | slide 17 |
+| Leurres | écart-type **1,6 à 2,3 pts** → aucun signal | slide 9 |
+| Éco-conception | boosting ≈ **×10**, RF ≈ **×20-30**, gain nul | slide 11 |
+| Tests | **59** tests, CI verte | slide 18 |
+| Budget infra | **10-20 €/mois** (ordre de grandeur) | slide 20 |
 
 ---
 
-## 4. Éthique, RGPD & biais — C2
+## ⚠️ Ce que je ne dis pas
 
-- **Variables sensibles** : `sexe`, `boursier`, origine → risque de **biais**
-  (direct et indirect via proxys).
-- **Effet de marquage** : étiqueter « à risque » n'est pas neutre.
-- **RGPD** : finalité limitée (aide ≠ sanction), information, **décision humaine**
-  (pas d'automatisation — art. 22).
-- **Protection appliquée (C2)** : Bronze brut restreint, Silver pseudonymisé HMAC,
-  Gold sans identifiants directs, rétention/purge et audit `privacy_audit_log`.
-- **Secrets hors Git** : `.env` local ignoré, `.env.example` versionné.
-
-**Garde-fous** : explicabilité · audit d'équité par sous-groupes · usage encadré ·
-minimisation · pseudonymisation · accountability.
-
-<!--
-[1:30] Montrer une vraie conscience éthique — c'est très regardé (C2 a un
-questionnaire séparé). Question piège classique : « en retirant le sexe, votre
-modèle est-il non-discriminant ? » → NON, des proxys corrélés peuvent réintroduire
-un biais → d'où l'audit d'équité que je montre plus loin.
--->
+- ❌ « Mon modèle détecte les décrocheurs » → ✅ « il **estime une probabilité** qui
+  **priorise** un accompagnement ».
+- ❌ Traduire l'AUC en euros économisés. Je n'ai aucune donnée sur l'effet du tutorat.
+- ❌ « C'est prêt pour la production. » → ✅ « la démarche est solide ; la validité
+  reste à confirmer sur données réelles ».
+- ❌ Survendre la stack Docker comme une architecture d'entreprise : elle est
+  **proportionnée**, c'est justement l'argument.
+- ❌ M'excuser de la précision à 63,5 % : c'est un **choix**, pas une faiblesse.
 
 ---
 
-## 5. Préparation des données — C3
+## 📖 Déroulé slide par slide
 
-Chaîne **déterministe** et reproductible :
+Format : **durée → cumul**. La phrase entre guillemets est celle que je peux dire telle quelle.
 
-- **dédoublonnage** (40 doublons → 5 200 lignes) ;
-- **nombres en texte** → float : « 61,8 » · « 61.4% » · « 14.4 km » ;
-- **dates multi-formats** → parsées ;
-- **encodages** harmonisés (`sexe`, `bac_type`, `mention_bac`, `boursier`…).
+### Ouverture — slides 1 à 3 · jusqu'à 2:00
 
-**Silver** = données nettoyées et pseudonymisées.  
-**Gold** = source unique de modélisation : features mi-S1, labels et split.
+**1. Titre** · 0:30 → 0:30
+« Je vous présente une solution d'IA qui détecte, dès le milieu du premier semestre,
+les étudiants de L1 en risque de décrochage, pour prioriser l'accompagnement — de
+façon explicable et conforme au RGPD. »
+Annoncer : 30 minutes, questions à la fin.
 
-Le notebook construit `X`, `y_clf` et `y_reg` **uniquement depuis le Gold dataset**.
+**2. Fil conducteur** · 0:30 → 1:00
+Ne pas lire les 8 points. « Le fil rouge, c'est la rigueur anti-fuite et
+l'explicabilité, parce que ce sont des données étudiantes. »
 
-> ⚠️ L'**imputation vit dans la Pipeline**, pas dans le nettoyage : médiane et mode
-> sont appris sur le train seul, sinon le test fuite vers l'entraînement.
+**3. Ma démarche** · 1:00 → 2:00
+Poser la méthode **avant** les résultats. « Je ne présente pas un modèle qui marche,
+je présente une suite de décisions que je peux toutes justifier — écrites au fur et
+à mesure, pas reconstruites après coup. »
+Citer seulement le déclencheur du jour 1 : l'AUC anormalement haute.
+→ *Transition* : « Et ça commence par le problème métier. »
 
-<!--
-[1:00] Insister sur 3 idées défendables :
-1. Le nettoyage est dans un MODULE → rejoué à l'identique en production.
-2. Silver pseudonymise, Gold sert réellement à entraîner/scorer.
-3. On impute DANS la pipeline (pas avant le split) sinon fuite du test.
-Montrer 1-2 exemples concrets de valeurs sales (« 14.4 km »).
--->
+### Cadrage — slides 4 à 5 · jusqu'à 4:00
 
----
+**4. Contexte** · 1:00 → 3:00
+Raconter, ne pas réciter. Le point clé : **la contrainte « mi-S1 » conditionne tout**
+— elle interdit certaines variables, j'y reviens dans deux slides.
 
-## 6. EDA — facteurs de risque & preuve des leurres — C3
+**5. Objectif IA** · 1:00 → 4:00
+Pourquoi de la classification et pas seulement une note prédite : **la décision
+métier est binaire** (j'accompagne ou non). La régression ne fait que calibrer.
+→ *Transition* : « Maintenant, les données — et les pièges qu'elles contiennent. »
 
-![w:560](../artifacts/figures/eda_signaux.png)
+### ⭐ Le cœur — slide 6 · jusqu'à 6:30
 
-- Décrocheurs = **moins de présence/LMS**, **plus de retards**, motivation basse.
-- Leurres : taux d'abandon **plat** entre modalités — écart-type **1,6 à 2,3 pts**
-  selon le leurre → **aucun signal**, je le montre au lieu de l'affirmer.
+**6. Les 3 pièges** · 2:30 → 6:30 — **SLIDE LA PLUS IMPORTANTE, prendre le temps**
+1. **Fuite de données** : `moyenne_finale` est un résultat de fin de semestre →
+   l'utiliser, c'est prédire le passé avec le futur.
+2. **Fuite temporelle** : `moyenne_partiels_s1` et `nb_ue_validees_s1` sont
+   consolidées **en fin** de S1 → vides au moment du scoring. Performance flatteuse,
+   modèle inutilisable.
+3. **Leurres** : je ne me contente pas de les retirer, **je prouve** qu'ils n'ont
+   pas de signal (écart-type 1,6 à 2,3 pts).
+Conclure : « et pour ne jamais me tromper, un garde-fou fait planter le pipeline si
+une colonne interdite entre dans le modèle. »
+→ *Transition* : « Ces données sont sensibles — d'où la slide suivante. »
 
-<!--
-[1:00] Montrer le graphe des densités par classe (présence, LMS, rendus...).
-« On voit visuellement que les signaux d'engagement séparent bien les deux
-groupes. » Puis mentionner le graphe des leurres (eda_leurres.png) : « et voici
-la preuve que les leurres n'apportent rien. » Tu peux mettre eda_leurres.png en
-2e image si la place le permet.
--->
+### Éthique et préparation — slides 7 à 9 · jusqu'à 10:00
 
----
+**7. Éthique & RGPD** · 1:30 → 8:00
+Très regardé (C2 a un questionnaire séparé). Anticiper la question piège :
+« en retirant le sexe, votre modèle est-il non-discriminant ? » → **non**, des proxys
+corrélés peuvent réintroduire un biais → d'où l'audit d'équité, slide 16.
 
-## 7. Choix du modèle — C4
+**8. Préparation** · 1:00 → 9:00
+Trois idées : le nettoyage est dans un **module** (rejoué à l'identique en prod) ;
+Silver pseudonymise ; **l'imputation est dans la Pipeline**, pas avant le split.
+Donner un exemple concret de valeur sale : « 14.4 km ».
 
-Démarche : **baseline** → comparer 3 familles, évaluées par **AUC**.
+**9. EDA** · 1:00 → 10:00
+« Les signaux d'engagement séparent visuellement les deux groupes. » Puis les leurres :
+« et voici la preuve qu'ils n'apportent rien. »
 
-![w:620](../artifacts/figures/roc_comparaison.png)
+### Modèle et sobriété — slides 10 à 12 · jusqu'à 12:30
 
-**Retenu : régression logistique** — **aucun gain d'AUC significatif** du boosting,
-et c'est le modèle le plus **explicable** et le plus **sobre**.
+**10. Choix du modèle** · 1:00 → 11:00
+Justifier l'AUC (insensible au seuil et au déséquilibre, contrairement à l'accuracy).
+« À performance égale, je choisis le plus explicable et le plus sobre. »
 
-*Arbitrage assumé : explicabilité > gain marginal non significatif.*
+**11. Éco-conception : le coût** · 0:45 → 11:45
+« Je l'ai **mesuré** au lieu de l'affirmer. » Le boosting coûte un ordre de grandeur
+de plus pour **zéro gain** → coût par point d'AUC infini.
+Si on questionne la mesure : sous Windows l'estimation CPU est approximative, elle
+sert à **comparer les modèles entre eux**, pas à publier une empreinte absolue.
 
-<!--
-[1:00] Justifier AUC (insensible au seuil et au déséquilibre, contrairement à
-l'accuracy). Montrer les courbes ROC superposées. Le message : « à performance
-égale, je choisis le modèle le plus EXPLICABLE et le plus SOBRE — c'est ce
-qu'exige le contexte. » Question probable : « pourquoi pas XGBoost ? » → pas de
-gain d'AUC ici, et moins explicable.
--->
-
----
-
-## 7.1 Éco-conception : ce que coûte un point d'AUC — C4
-
-Le coût de calcul est **mesuré** pendant la comparaison (CodeCarbon, mix français) :
-
-| Modèle | Coût de calcul | AUC validation | Coût / point d'AUC |
-|---|---|---|---|
-| **Régression logistique** *(retenu)* | référence **× 1** | **0,949** | — |
-| XGBoost | **~ × 10** | 0,948 | **∞** (aucun gain) |
-| Random Forest | **~ × 20 à 30** | 0,942 | **∞** (aucun gain) |
-
-> Quelques centièmes de Wh pour toute la comparaison : dérisoire dans l'absolu.
-> La sobriété se joue ailleurs que sur l'algorithme → slide suivante.
->
-> *Ordres de grandeur : la mesure varie avec la charge machine, l'écart entre modèles non.*
-
-<!--
-[0:45] Point souvent survolé : je l'ai MESURÉ au lieu de l'affirmer.
-Message : le boosting coûte un ordre de grandeur de plus pour zéro gain — le coût par
-point d'AUC est infini, l'arbitrage est tranché par les chiffres et non par une
-préférence personnelle.
-Limite à assumer si on questionne : sous Windows la mesure CPU est approximative,
-elle sert à comparer les modèles entre eux, pas à publier une empreinte absolue.
-Enchaîner tout de suite sur les leviers : quelques centièmes de Wh, ce n'est pas là
-que ça se joue. Chiffres exacts du dernier run dans le notebook §8.3 si on les demande.
--->
-
----
-
-<style scoped>
-table { font-size: 0.78em; }
-</style>
-
-## 7.2 Les 6 leviers d'éco-conception — C4 / C7
-
-| Levier | Décision prise | Effet |
-|---|---|---|
-| **1. Fréquence de réentraînement** | annuelle, par cohorte — pas mensuelle (§16) | **~11 entraînements évités par an** |
-| **2. Choix du modèle** | régression logistique plutôt que boosting | entraînement et inférence négligeables, pas de GPU |
-| **3. Dimensionnement** | VPS conteneurisé, pas de Kubernetes (§15) | pas de cluster inactif à alimenter |
-| **4. Minimisation des données** | 31 features ; texte libre réduit à un booléen | moins de stockage et de calcul, moins de risque RGPD |
-| **5. Rythme de scoring** | un batch par semestre, pas de temps réel | pas de service de scoring permanent sous charge |
-| **6. Rétention** | purge automatique des lots expirés (§14) | stockage borné dans le temps |
-
-> **Quatre leviers sur six** relèvent de l'architecture et de l'exploitation, pas de la modélisation — et deux d'entre eux (4 et 6) servent aussi le RGPD.
-
-<!--
-[0:45] LE message de la séquence éco-conception : le levier le plus fort n'est pas
-l'algorithme mais le fait de NE PAS RECALCULER ce qui n'a pas besoin de l'être.
-Mensuel → annuel = 11 entraînements complets économisés ; changer d'algorithme
-économise un facteur 12 sur quelques secondes. Ce n'est pas le même ordre.
-Si le jury enchaîne sur le RGPD : les leviers 4 et 6 réduisent à la fois
+**12. Les 6 leviers** · 0:45 → 12:30
+Le message : le levier le plus fort n'est pas l'algorithme, c'est de **ne pas
+recalculer ce qui n'a pas besoin de l'être**. Mensuel → annuel = 11 entraînements
+économisés ; changer d'algorithme économise quelques secondes.
+Si le jury enchaîne sur le RGPD : les leviers 4 et 6 réduisent **à la fois**
 l'empreinte et la surface de données personnelles.
--->
+
+### Entraînement et résultats — slides 13 à 17 · jusqu'à 17:30
+
+**13. Entraînement** · 1:00 → 13:30
+Rassurer sur la robustesse : **AUC en validation croisée ≈ AUC sur test** → pas de
+surapprentissage. Pondération plutôt que SMOTE : préserve la calibration.
+Insister : **le test n'a pas servi à choisir le seuil**.
+
+**14. Choix du seuil** · 1:30 → 15:00 — **⭐ slide qui marque**
+Je ne prends pas 0,5 par défaut : 0,5 suppose qu'un faux négatif et un faux positif
+coûtent la même chose. Rater un décrocheur peut lui coûter son année ; une fausse
+alerte coûte 20 minutes d'entretien. J'écris le coût : **5:1**. Optimum à **0,30**.
+Assumer : le ratio 5:1 est une **hypothèse à valider avec la direction**.
+
+**15. Résultats** · 1:00 → 16:00
+« Au seuil retenu, je détecte **95,9 %** des futurs décrocheurs. » Assumer la
+précision à 63,5 % : mieux vaut quelques accompagnements en trop qu'un décrocheur raté.
+
+**16. Explicabilité & équité** · 1:00 → 17:00
+Deux messages : (1) pas une boîte noire — SHAP montre des facteurs **actionnables**
+(présence, LMS, rendus) ; (2) équité vérifiée, écart de rappel **1,9 pt**.
+
+**17. Régression** · 0:30 → 17:30
+Court. Utile pour **nuancer** (soutien léger vs renforcé), jamais pour prédire une
+note exacte, jamais pour prédire l'abandon.
+
+### Industrialisation — slides 18 à 29 · jusqu'à 24:15
+
+**18. Implémentation** · 1:00 → 18:30
+« Du notebook au service, puis au Run » : le notebook explique, le package exécute,
+le registre maîtrise les versions.
+
+**19. Médaillon** · 1:00 → 19:30
+Bronze reste brut **parce que c'est la zone de preuve et de reprise**, mais restreinte.
+Silver pseudonymise. Gold est la seule source de modélisation.
+
+**20. Architecture proportionnée** · 1:00 → 20:30
+Dimensionner pour le besoin réel. Le trafic est faible et rejouable : **Kubernetes
+n'apporte rien ici**. Les montants sont des ordres de grandeur, pas des devis.
+
+**21. Cycle de vie** · 1:00 → 21:30
+Un réentraînement mensuel n'a pas de sens : **la vérité terrain arrive après la
+cohorte**. La dérive ouvre une **investigation**, pas un entraînement aveugle.
+
+**22. Supervision** · 0:45 → 22:15
+Expliquer le *dead-man's switch* : un job qui ne démarre plus n'émet aucune erreur.
+Il doit donc dire « je suis passé » ; c'est **l'absence** de signal qui alerte.
+
+**23-29. Bloc des 6 captures** · 2:00 → 24:15
+**Les faire défiler d'un trait**, sans commenter chacune. Un seul message :
+« ces preuves ne peuvent pas sortir d'un notebook — ce sont des processus réseau,
+vérifiés dans la stack Docker. »
+Ne détailler que si on me le demande.
+
+### Recul et clôture — slides 30 à 33 · jusqu'à 28:45
+
+**30. TCO & valeur** · 1:00 → 25:15
+On ne dispose ni d'un coût officiel du décrochage ni de l'effet causal du tutorat.
+La bonne réponse est de **proposer la méthode de mesure**, pas de fabriquer un chiffre.
+
+**31. Les arbitrages** · 1:30 → 26:45 — **⭐ répond à « le raisonnement compte autant que le résultat »**
+Ne pas tout lire : développer **deux ou trois** cas (la fuite temporelle, le seuil,
+le réentraînement mensuel) et laisser le tableau parler.
+« À chaque fois, le réflexe courant aurait donné un chiffre plus flatteur ou une
+architecture plus impressionnante — et un dispositif moins valide. »
+
+**32. Limites** · 1:00 → 27:45
+Montrer de la lucidité, ne **pas** survendre. « La démarche est solide et
+reproductible ; sa validité en production reste à confirmer sur données réelles. »
+
+**33. Conclusion** · 1:00 → 28:45
+Résumer les 5 messages en 30 secondes, finir sur la valeur métier : « une aide
+concrète pour accompagner à temps les étudiants à risque. »
+Donner le lien du dépôt. Enchaîner sur les questions avec assurance.
 
 ---
 
-## 8. Entraînement & validation — C5
+## 💬 Questions du jury — réponses prêtes
 
-- **Split stratifié** train / validation / test (test jamais utilisé pour choisir le seuil).
-- **Tuning** de la régularisation `C` par validation croisée stratifiée (scoring AUC).
-- **Déséquilibre** (~28 %) : `class_weight="balanced"` (pas de sur-échantillonnage agressif).
-- **Seuil métier** choisi sur validation, puis évalué sur test hold-out.
-- **AUC CV ≈ AUC test** → pas de surapprentissage visible.
+Les slides 34 et 35 sont mes filets. Y aller sans hésiter plutôt que de paraphraser.
 
-<!--
-[1:00] Rassurer sur la robustesse : le fait que l'AUC en validation croisée
-égale l'AUC sur le test hold-out prouve qu'on ne surapprend pas. Expliquer
-pourquoi pondération plutôt que SMOTE : préserve la calibration des probabilités.
-Point important : le test final n'a pas servi à choisir le seuil.
--->
-
----
-
-## 9. Choix du seuil — raisonner en coût métier — C5 / C8
-
-![w:600](../artifacts/figures/seuil_cout.png)
-
-- **Manquer un décrocheur (FN)** coûte plus cher qu'une alerte inutile (FP).
-- Ratio **FN:FP = 5:1** (hypothèse métier explicite) → seuil ≈ **0,30** sur validation.
-- Résultat test : **rappel 95,9 %** (on rate très peu de décrocheurs), précision **63,5 %**.
-
-<!--
-[1:30] C'est un slide qui impressionne : montrer qu'on ne prend pas 0,5 par
-défaut mais qu'on OPTIMISE un coût métier sur validation. Assumer que le ratio 5:1 est une
-hypothèse à valider avec la direction. Lien direct avec l'objectif : ne pas
-laisser des étudiants décrocher.
--->
-
----
-
-## 10. Résultats — performance — C8
-
-![w:380](../artifacts/figures/confusion.png)
-
-| Indicateur | Valeur |
+| Question | Ma réponse en une phrase |
 |---|---|
-| AUC (test) | **0,949** |
-| Rappel (seuil métier) | **0,96** |
-| Précision | 0,64 |
+| **Il n'y a pas une fuite ?** | Trois pièges traités, périmètre codé dans `features.py`, garde-fou `assert_no_leakage` qui fait échouer le pipeline. |
+| **95 % d'AUC, c'est suspect** | Périmètre verrouillé + réaudit colonne par colonne + **données synthétiques à signal fort** ; à revalider sur données réelles. |
+| **Pourquoi pas XGBoost ?** | AUC équivalente, mais moins explicable et **un ordre de grandeur de calcul en plus** — je l'ai mesuré. |
+| **Éco-conception ?** | Coût mesuré par modèle, coût par point d'AUC, 6 leviers ; le principal est la **fréquence de réentraînement**. |
+| **Pourquoi ce seuil ?** | Minimisation du coût métier sur la **validation** ; FN 5× plus coûteux qu'un FP ; le test reste intact. |
+| **Votre modèle discrimine-t-il ?** | Retirer `sexe` ne suffit pas (proxys) → audit par sous-groupes, écart de rappel 1,9 pt, et décision humaine. |
+| **Bronze contient des données personnelles ?** | Oui, assumé : zone restreinte de traçabilité et de reprise, purgée ; Silver et Gold sont pseudonymisés. |
+| **Et la dérive en production ?** | `drift-report` (PSI), seuils `watch`/`alert`, persistance en Gold ; dérive = investigation. |
+| **Pourquoi pas un réentraînement mensuel ?** | Les labels d'abandon arrivent **par cohorte** : réentraîner mensuellement, c'est apprendre sur des étiquettes inexistantes. |
+| **Si le modèle se dégrade ?** | Gate chiffrée (AUC, rappel, équité) + approbation humaine + alias MLflow et rollback. |
+| **Pourquoi pas Kubernetes ?** | 5 200 étudiants/an, batch rejouable : un VPS conteneurisé est proportionné. |
+| **Quel ROI ?** | TCO chiffrable, valeur mesurable **par un pilote causal** ; je n'invente aucun gain à partir de l'AUC. |
+| **Un job qui ne tourne plus ?** | Heartbeat externe : c'est l'absence de signal qui déclenche l'alerte. |
 
-<!--
-[1:00] Lire la matrice de confusion : « au seuil retenu, je détecte 96 % des
-futurs décrocheurs. » Assumer la précision plus basse (64 %) : c'est un choix —
-mieux vaut quelques accompagnements en trop qu'un décrocheur raté. Coût d'un FN
->> coût d'un FP.
--->
-
----
-
-## 11. Explicabilité & équité — C8 / C2
-
-![w:520](../artifacts/figures/shap_summary.png)
-
-- Facteurs **actionnables** : présence, LMS, rendus, motivation.
-- **Audit d'équité** : rappel comparable F/M/boursier (**0,935–0,975**) →
-  écart maximal **1,9 pt**, très en deçà du seuil d'alerte de **10 pts**.
-
-<!--
-[1:00] Deux messages : (1) le modèle n'est pas une boîte noire — SHAP et
-l'importance des variables montrent des facteurs sur lesquels on peut AGIR
-(relance, tutorat). (2) J'ai vérifié l'équité entre sous-groupes sensibles :
-pas d'écart marqué. Tu peux aussi montrer importance_permutation.png.
--->
+**Si je ne sais pas** : « Je ne l'ai pas traité dans ce projet. Voici comment je m'y
+prendrais : … » — bien meilleur qu'une improvisation.
 
 ---
 
-## 12. Cible secondaire — régression `moyenne_finale` — C8
+## ✅ Checklist — 15 minutes avant
 
-![w:430](../artifacts/figures/regression.png)
-
-- Estime la moyenne finale attendue → **calibrer l'intensité** de l'aide.
-- R² ≈ **0,68**, erreur ≈ 2,3 pts/20.
-- Reste **exclue des features** de classification (fuite).
-
-<!--
-[0:30] Court. Montrer que la régression est utile pour NUANCER (soutien léger vs
-renforcé), sans prétendre prédire une note exacte. Rappeler qu'on ne s'en sert
-JAMAIS pour prédire abandon.
--->
+- [ ] PPTX ouvert en **mode présentateur**, notes visibles (elles sont dans le fichier)
+- [ ] Ce conducteur ouvert à côté, ou imprimé
+- [ ] Notebook `decrochage_etudiant.ipynb` ouvert **exécuté**, prêt à montrer §8.3 et §12
+- [ ] Journal de bord ouvert (on peut me demander une décision datée)
+- [ ] Dépôt GitHub ouvert dans un onglet : `github.com/MichaeLab34/examen`
+- [ ] Chronomètre lancé au début, repères 6:30 / 15:00 / 22:00 en tête
+- [ ] Eau, téléphone en silencieux, notifications coupées
 
 ---
 
-## 13. Implémentation & service — C6
+## 🔧 Régénérer les slides
 
-- **Bundle sérialisé** (joblib) : Pipeline + features + seuil + catalogue + métadonnées.
-- Package `decrochage` : `training.py`, `serving.py`, `api.py`, `cli.py`,
-  `persistence.py`, `monitoring.py`, `tracking.py`, `scheduler.py`.
-- **Contrats industrialisés** : CLI batch, API FastAPI `/predict`, bundle rechargeable hors notebook.
-- **Sécurité API** : clé, limite de débit, requêtes corrélées sans journaliser les données.
-- **Cycle de vie** : runs MLflow (paramètres, métriques, artefacts), registre + rollback.
-- **Observabilité** : `/metrics`, dashboard Grafana provisionné, alertes et heartbeat.
-- **Qualité** : 52 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
-- Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
+Le PPTX est produit depuis [`soutenance_slides.md`](soutenance_slides.md) :
 
-<!--
-[1:00] Montrer qu'on va « du notebook au service puis au Run » : le notebook
-explique, le package exécute, et le registre permet de maîtriser les versions.
-Mentionner train, predict, drift-report, model-register/promote/rollback.
--->
-
----
-
-## 14. Persistance SQL & architecture médaillon — C7
-
-**Ingestion → Bronze → Silver → Gold → Entraînement/Scoring → API/CLI → Monitoring**
-
-| Couche | Rôle | Données personnelles |
-|---|---|---|
-| Bronze | lignes sources brutes, traçabilité | restreintes, purgées |
-| Silver | nettoyage + normalisation | IDs remplacés par HMAC |
-| Gold | features, split, scores, drift | pas d'identifiants directs |
-
-Stack locale production-like : **Postgres via Docker Compose**.  
-Fallback dev : SQLite local ignoré par Git.
-
-<!--
-[1:00] Faire le lien avec les exigences RGPD (C2/C7) : Bronze reste brut parce que c'est la
-zone de preuve et de reprise, mais elle est restreinte. Silver pseudonymise.
-Gold est la seule source de modélisation et de scoring. Mentionner la commande :
-decrochage medallion-load.
--->
-
----
-
-## 15. Architecture d'exploitation proportionnée — C7
-
-**~5 200 étudiants/an · batch mi-S1 · API peu sollicitée**
-
-| Choix | Décision adaptée au projet |
-|---|---|
-| Hébergement | **VPS européen conteneurisé** ; serverless à réévaluer, Kubernetes écarté |
-| Sécurité réseau | **Caddy** reverse-proxy + HTTPS automatique |
-| Données | Postgres sur le VPS, sauvegarde hors hôte, secrets hors Git |
-| Disponibilité | `/health` + `/ready` ; pas de haute disponibilité sans SLA |
-| Budget indicatif | **10–20 €/mois**, +5–10 € pour un environnement de test |
-
-La portabilité vient des conteneurs : évoluer plus tard sans réécrire le service.
-
-<!--
-[1:00] Présenter le principe d'architecture : dimensionner pour le besoin réel.
-Le trafic est faible et rejouable : Kubernetes n'apporte rien aujourd'hui.
-Les montants sont des ordres de grandeur à confirmer par la DSI, pas des devis.
--->
-
----
-
-## 16. Cycle de vie du modèle — C9
-
-1. **Contrôler chaque batch** : qualité + PSI (`watch` ≥ 0,10 ; `alert` ≥ 0,25).
-2. **Dérive sans labels frais** : investiguer la collecte, ne pas réentraîner à l'aveugle.
-3. **Labels de la nouvelle cohorte disponibles** : entraîner un `candidate` annuel.
-4. **Tracer l'expérience** : paramètres, métriques et bundle dans un run MLflow.
-5. **Gate** : AUC ≥ 0,85 · rappel ≥ 0,90 sans régression · écart équité ≤ 10 pts.
-6. **Validation humaine obligatoire**, puis alias MLflow `production` ou rollback.
-
-APScheduler contrôle puis évalue la politique chaque semaine ; l'échéance
-annuelle reste un déclencheur. Un
-redémarrage le même jour ne crée pas de doublon.
-
-<!--
-[1:00] Dans ce contexte, un réentraînement mensuel
-n'a pas de sens car la vérité terrain arrive après la cohorte. Le déclencheur
-drift ouvre une investigation ; il n'autorise un entraînement que si les labels
-frais existent. Le candidat du notebook passe le gate technique (écart F/M et
-boursier = 1,9 pt) mais reste « en attente » sans approbation humaine.
--->
-
----
-
-## 17. Supervision et alertes — C8 / C9
-
-| Besoin | Réponse |
-|---|---|
-| Quotidien | canal d'équipe réussite étudiante / DSI |
-| Vue Run | dashboard Grafana : disponibilité, débit, statuts HTTP, latence p95 |
-| Incident technique | API indisponible ou 5xx > 1 % **pendant 5 min** |
-| Tâche silencieuse | heartbeat externe : contrôle drift/réentraînement attendu mais absent |
-| Critique | astreinte DSI seulement pendant la fenêtre de scoring |
-
-**Hystérésis + cooldown 24 h** : une dérive persistante ne spamme pas l'équipe.
-
-<!--
-[0:45] Expliquer le dead-man's switch : un job qui ne démarre plus n'émet
-aucune erreur. Il doit donc envoyer un « je suis passé » ; l'absence du signal
-déclenche l'alerte. L'astreinte 24/7 permanente serait disproportionnée ici.
--->
-
----
-
-## 17.1 Grafana confirme un service disponible
-
-![Dashboard Grafana alimenté par la stack Docker](screenshots/docker/grafana-dashboard.png)
-
-- Disponibilité, débit par route, erreurs 5xx et latence p95 sont visibles en conditions réelles.
-- Les mesures proviennent de l'API conteneurisée et de Prometheus, pas de sorties calculées dans le notebook.
-
-<!--
-[2:00] BLOC DE 6 CAPTURES — les faire défiler d'un trait, sans commenter chacune.
-Un seul message : « ces preuves ne peuvent pas sortir d'un notebook, ce sont des
-processus réseau, vérifiés dans la stack Docker avec Playwright. »
-Ne détailler (Prometheus UP, 2 règles Grafana, rollback MLflow, log JSON borné)
-que si le jury pose la question.
--->
-
----
-
-## 17.2 Prometheus collecte l'API
-
-![Cible API active dans Prometheus](screenshots/docker/prometheus-targets.png)
-
-- La cible `decrochage-api` est collectée sur `/metrics`, état `UP`.
-
----
-
-## 17.3 Grafana évalue les alertes
-
-![Règles d'alerte provisionnées dans Grafana](screenshots/docker/grafana-alert-rules.png)
-
-- Deux règles provisionnées : indisponibilité de l'API, taux d'erreurs 5xx > 1 %.
-
----
-
-<style scoped>
-section img { max-height: 44vh; }
-</style>
-
-## 17.4 Caddy expose l'API en HTTPS
-
-![Documentation Swagger chargée via Caddy en HTTPS](screenshots/docker/caddy-https-api.png)
-
-- Caddy termine HTTPS et transmet les requêtes au conteneur API.
-- Certificat local pour la démonstration ; domaine et certificat gérés en production.
-
-> Ces preuves ne peuvent pas sortir du notebook seul : Caddy, Prometheus et Grafana sont des processus réseau indépendants.
-
-<!--
-Le notebook prouve la démarche analytique ; ces captures prouvent l'exploitation
-réelle : HTTPS, collecte périodique, dashboard et évaluation continue des alertes.
--->
-
----
-
-## 17.5 MLflow trace les entraînements
-
-![Deux runs terminés dans l'expérience MLflow](screenshots/docker/mlflow-runs.png)
-
-- Chaque entraînement enregistre paramètres, métriques, rapport JSON et bundle modèle.
-- Deux runs indépendants sont visibles dans `decrochage-l1-training`.
-
----
-
-## 17.6 Versions, promotion et rollback
-
-![Registre MLflow après rollback](screenshots/docker/mlflow-registry.png)
-
-- La version 2 a été promue après validation humaine, puis archivée lors du rollback.
-- L'alias `production` référence de nouveau la version 1, chargée par l'API.
-- `/ready` expose `model_version=1` et `model_alias=production`.
-
----
-
-## 17.7 Journaux JSON corrélés et bornés
-
-```json
-{"timestamp":"2026-07-21T14:05:24+00:00","level":"INFO","event":"api_request","request_id":"jury-log-proof-001","method":"GET","path":"/health","status":200,"duration_ms":2.45}
+```powershell
+cd reports
+npx @marp-team/marp-cli soutenance_slides.md --pptx --allow-local-files -o SUPPORT_SOUTENANCE.pptx
 ```
 
-- Une ligne JSON par requête, sans payload étudiant ni clé API.
-- `X-Request-ID` relie la réponse utilisateur au journal technique.
-- Rotation Docker : **10 Mo par fichier, 5 fichiers conservés**.
-
-<!--
-Montrer l'interface MLflow : deux runs, paramètres, métriques et artefacts.
-Puis montrer le registre : la version 1 est revenue en production après rollback.
-Conclure avec le log JSON corrélé et la rétention locale bornée.
--->
-
----
-
-## 18. TCO & valeur du pilote — C7 / C9
-
-- **TCO** = hébergement + sauvegardes + temps DSI/DPO + revue du modèle + interventions.
-- Le coût d'infrastructure seul ne mesure pas la valeur du dispositif.
-- Formule pilote :
-  **étudiants utilement accompagnés × effet causal du dispositif**.
-- L'AUC mesure la discrimination du modèle, **pas** l'impact du tutorat.
-- Mesure attendue : pilote progressif / A-B test, capacité des tuteurs, faux positifs.
-
-> Aucun gain financier inventé : les hypothèses doivent être validées avec l'université.
-
-<!--
-[1:00] Adapter le ROI industriel au contexte éducatif. On ne dispose pas d'un
-coût officiel du décrochage ni de l'uplift causal de l'accompagnement. La bonne
-réponse est de proposer la méthode de mesure, pas de fabriquer un chiffre.
--->
-
----
-
-## 19. Les arbitrages — ce que j'ai failli faire
-
-| Réflexe de départ | Pourquoi je ne l'ai pas suivi |
-|---|---|
-| Garder `moyenne_partiels_s1` (« c'est du S1 ! ») | consolidée en **fin** de S1 → vide au moment du scoring |
-| Imputer avant le split | la médiane du jeu entier fait fuiter le test vers le train |
-| Prendre **XGBoost** (réflexe tabulaire) | aucun gain d'AUC significatif, et coefficients illisibles |
-| Laisser le seuil à **0,5** | suppose FN = FP ; ici le coût réel est **5:1** |
-| Réentraîner **tous les mois** | les labels d'abandon n'arrivent qu'après la cohorte |
-| Traduire l'AUC en **euros économisés** | l'AUC mesure la discrimination, pas l'effet du tutorat |
-| Déployer sur **Kubernetes** | 5 200 étudiants/an : un VPS conteneurisé suffit |
-
-> Chacun de ces arbitrages est daté et justifié dans le journal de bord.
-
-<!--
-[1:30] LE slide qui répond à « le raisonnement compte autant que le résultat ».
-Ne pas tout lire : en développer 2 ou 3 (la fuite temporelle, le seuil, le
-réentraînement mensuel) et laisser le tableau parler pour le reste.
-Message : « à chaque fois, le réflexe courant aurait donné un chiffre plus
-flatteur ou une archi plus impressionnante — et un dispositif moins valide. »
--->
-
----
-
-## 20. Limites & recommandations
-
-- **Données synthétiques** → AUC élevée à revalider sur données réelles.
-- **Corrélation ≠ causalité** → A/B test nécessaire avant conclusion business.
-- **Production réelle** : DPO, DPIA/AIPD, RBAC DB, coffre de secrets, dashboards.
-- **Run réel** : confirmer le TCO avec la DSI, brancher le canal d'alerte et tester les sauvegardes.
-- **Éthique** : surveiller l'équité en continu, documenter les recours.
-- Le score **priorise**, il ne **décide** pas.
-
-<!--
-[1:00] Montrer de la lucidité — le jury valorise un candidat qui connaît les
-limites de son travail. NE PAS survendre. « Ce que j'ai construit est une
-démarche solide et reproductible ; sa validité en production reste à confirmer
-sur données réelles. »
--->
-
----
-
-## 21. Conclusion — du modèle au Run, C1→C9
-
-- **Rigueur anti-fuite** (3 pièges neutralisés + garde-fou).
-- **Modèle explicable** performant (AUC 0,95, rappel 95,9 %).
-- **Seuil calibré** sur le coût métier.
-- **Prototype Run vérifiable** : HTTPS, métriques, alertes, heartbeat, promotion humaine et rollback.
-- **RGPD documenté et implémenté** dès la persistance.
-
-📦 Code complet, tests, CI et documentation : **[github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)**
-
-**Merci — vos questions ?**
-
-<!--
-[1:00] Résumer en 30 s les 5 messages. Terminer par la valeur métier : « une
-aide concrète pour accompagner à temps les étudiants à risque. » Enchaîner sur
-les questions avec assurance.
--->
-
----
-
-<!-- _paginate: false -->
-<style scoped>
-section { font-size: 21px; }
-</style>
-
-## Backup — questions probables du jury
-
-- **Fuites ?** → 3 pièges + `assert_no_leakage` + périmètre codé.
-- **AUC 0,95 = fuite ?** → non : verrou + données synthétiques ; à revalider.
-- **Pourquoi LogReg et pas XGBoost ?** → même AUC, plus explicable, et **un ordre de grandeur de calcul en moins** (mesuré).
-- **Éco-conception ?** → coût mesuré par modèle, coût/point d'AUC, 6 leviers ; le principal est la fréquence de réentraînement.
-- **Choix du seuil ?** → minimisation du coût métier sur validation (FN >> FP).
-- **Équité / RGPD ?** → audit sous-groupes + décision humaine + minimisation.
-- **Bronze contient du brut ?** → oui, zone restreinte de traçabilité ; Silver/Gold protègent l'usage.
-- **Drift en production ?** → `decrochage drift-report` + Gold SQL + seuils PSI + ré-entraînement.
-- **Pourquoi pas mensuel ?** → les labels d'abandon arrivent par cohorte ; drift = investigation, pas entraînement aveugle.
-- **Modèle dégradé ?** → gate rappel/AUC/équité, approbation humaine, alias MLflow et rollback.
-- **Pourquoi pas Kubernetes ?** → faible volume, batch rejouable ; VPS conteneurisé proportionné.
-- **Job qui ne tourne plus ?** → heartbeat externe : l'absence de ping déclenche l'alerte.
-- **ROI ?** → TCO chiffré, valeur mesurée par pilote causal ; aucun gain inventé à partir de l'AUC.
-
-<!--
-Slide de secours, à ne PAS présenter : à garder sous la main pendant les 30 min
-de questions. Prépare 1-2 phrases pour chacune à l'avance.
--->
-
----
-
-<!-- _paginate: false -->
-<style scoped>
-table { font-size: 0.74em; }
-</style>
-
-## Backup — traçabilité C1 → C9
-
-| Compétence | Preuve | Où |
-|---|---|---|
-| **C1** Cadrage & données | besoin, deux cibles, sources, gouvernance | notebook §2-3 + *JdB* |
-| **C2** Éthique & conformité | proxys, RGPD, art. 22, audit d'équité | notebook §4 · §12.4 · `docs/rgpd_accountability.md` |
-| **C3** Préparation | dédoublonnage, parsing, imputation Pipeline, features | notebook §5-7 · `preprocessing.py` · `features.py` |
-| **C4** Choix du modèle | baseline + 3 familles, ROC/AUC, coût de calcul mesuré | notebook §8 · §8.3 · `ecodesign.py` |
-| **C5** Entraînement | split 3 voies, CV stratifiée, seuil par coût | notebook §9 · `training.py` |
-| **C6** Implémentation | bundle joblib, CLI, API FastAPI, contrat I/O | notebook §10 · `serving.py` · `api.py` |
-| **C7** Architecture | médaillon, contraintes, dimensionnement, éco-conception, TCO | notebook §11 · `ARCHITECTURE_PROJET.md` |
-| **C8** Performance & impacts | AUC/rappel/F1, SHAP, équité, régression | notebook §12 |
-| **C9** Amélioration continue | PSI, politique de réentraînement, MLflow, alertes | notebook §13 · `monitoring.py` · `operations.py` |
-
-Journal de bord : `notebooks/journal_de_bord.ipynb` — 10 journées datées + bilan.
-
-Tous ces chemins sont consultables sur **[github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)**.
-
-<!--
-Slide de secours pour un jury qui coche un référentiel : permet de pointer
-immédiatement la preuve demandée. À ne pas présenter spontanément.
--->
+Les chiffres cités viennent des outputs de `notebooks/decrochage_etudiant.ipynb` :
+toute réexécution qui les modifie doit être répercutée dans les slides **et** dans
+l'antisèche ci-dessus.

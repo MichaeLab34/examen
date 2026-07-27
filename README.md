@@ -44,7 +44,7 @@ examen/
 ├── artifacts/
 │   ├── models/                 # bundle sérialisé (joblib)
 │   └── figures/                # graphiques exportés
-└── reports/                    # énoncé, support de soutenance
+└── reports/                    # énoncé, slides + conducteur de soutenance
 ```
 
 ## Points méthodologiques clés
