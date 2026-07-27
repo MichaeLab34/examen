@@ -260,20 +260,23 @@ Le coût de calcul est **mesuré** pendant la comparaison (CodeCarbon, mix fran�
 | Modèle | Coût de calcul | AUC validation | Coût / point d'AUC |
 |---|---|---|---|
 | **Régression logistique** *(retenu)* | référence **× 1** | **0,949** | — |
-| XGBoost | **× 12** | 0,948 | **∞** (aucun gain) |
-| Random Forest | **× 23** | 0,942 | **∞** (aucun gain) |
+| XGBoost | **~ × 10** | 0,948 | **∞** (aucun gain) |
+| Random Forest | **~ × 20 à 30** | 0,942 | **∞** (aucun gain) |
 
-> Total mesuré pour toute la comparaison : **0,022 Wh**. Dérisoire dans l'absolu :
-> la sobriété se joue ailleurs que sur l'algorithme → slide suivante.
+> Quelques centièmes de Wh pour toute la comparaison : dérisoire dans l'absolu.
+> La sobriété se joue ailleurs que sur l'algorithme → slide suivante.
+>
+> *Ordres de grandeur : la mesure varie avec la charge machine, l'écart entre modèles non.*
 
 <!--
 [0:45] Point souvent survolé : je l'ai MESURÉ au lieu de l'affirmer.
-Message : le boosting coûte 12 à 23 fois plus cher pour zéro gain — le coût par
+Message : le boosting coûte un ordre de grandeur de plus pour zéro gain — le coût par
 point d'AUC est infini, l'arbitrage est tranché par les chiffres et non par une
 préférence personnelle.
 Limite à assumer si on questionne : sous Windows la mesure CPU est approximative,
 elle sert à comparer les modèles entre eux, pas à publier une empreinte absolue.
-Enchaîner tout de suite sur les leviers : 0,022 Wh, ce n'est pas là que ça se joue.
+Enchaîner tout de suite sur les leviers : quelques centièmes de Wh, ce n'est pas là
+que ça se joue. Chiffres exacts du dernier run dans le notebook §8.3 si on les demande.
 -->
 
 ---
@@ -677,7 +680,7 @@ section { font-size: 21px; }
 
 - **Fuites ?** → 3 pièges + `assert_no_leakage` + périmètre codé.
 - **AUC 0,95 = fuite ?** → non : verrou + données synthétiques ; à revalider.
-- **Pourquoi LogReg et pas XGBoost ?** → même AUC, plus explicable, et **12 à 23 × moins de calcul** (mesuré).
+- **Pourquoi LogReg et pas XGBoost ?** → même AUC, plus explicable, et **un ordre de grandeur de calcul en moins** (mesuré).
 - **Éco-conception ?** → coût mesuré par modèle, coût/point d'AUC, 6 leviers ; le principal est la fréquence de réentraînement.
 - **Choix du seuil ?** → minimisation du coût métier sur validation (FN >> FP).
 - **Équité / RGPD ?** → audit sous-groupes + décision humaine + minimisation.
