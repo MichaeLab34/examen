@@ -25,6 +25,7 @@ dependencies = [
     "typer>=0.12",
     "uvicorn>=0.30",
     "apscheduler>=3.11,<4",
+    "pandas-stubs~=2.3.3",
 ]
 
 [dependency-groups]
