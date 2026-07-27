@@ -8,7 +8,9 @@ régression secondaire), afin de prioriser les dispositifs d'accompagnement.
 
 Le livrable central est un **notebook unique et exécutable**
 (`notebooks/decrochage_etudiant.ipynb`) couvrant les compétences C1 → C9, avec
-journal de bord à chaque grande étape.
+journal de bord à chaque grande étape. Le journal détaillé au jour le jour
+(décisions, difficultés, arbitrages) est tenu à part dans
+`notebooks/journal_de_bord.ipynb` et fait partie des livrables.
 
 ## Structure
 
@@ -21,7 +23,8 @@ examen/
 │   ├── raw/                    # données brutes fournies (3 CSV) — livrable
 │   └── processed/              # espace transitoire ignoré ; la cible est la BDD
 ├── notebooks/
-│   └── decrochage_etudiant.ipynb   # notebook certifiant (plan imposé 0→15)
+│   ├── decrochage_etudiant.ipynb   # notebook certifiant (plan imposé 0→15)
+│   └── journal_de_bord.ipynb       # journal de bord détaillé, jour par jour
 ├── src/decrochage/            # code réutilisable & reproductible
 │   ├── preprocessing.py        # parsing données sales, normalisation, dédoublonnage
 │   ├── features.py             # périmètre de scoring anti-fuite + feature engineering
