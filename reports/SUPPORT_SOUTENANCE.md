@@ -274,13 +274,25 @@ prendrais : … » — bien meilleur qu'une improvisation.
 
 ## 🔧 Régénérer les slides
 
-Le PPTX est produit depuis [`soutenance_slides.md`](soutenance_slides.md) :
+Le PPTX est produit depuis [`soutenance_slides.md`](soutenance_slides.md) (format
+[Marp](https://marp.app)) :
 
 ```powershell
 cd reports
 npx @marp-team/marp-cli soutenance_slides.md --pptx --allow-local-files -o SUPPORT_SOUTENANCE.pptx
 ```
 
-Les chiffres cités viennent des outputs de `notebooks/decrochage_etudiant.ipynb` :
-toute réexécution qui les modifie doit être répercutée dans les slides **et** dans
-l'antisèche ci-dessus.
+Alternative : extension « Marp for VS Code » → clic droit → *Export slide deck*.
+Fermer PowerPoint avant, sinon l'écriture échoue sur un fichier verrouillé.
+
+**À savoir sur la source :**
+
+- une slide par bloc séparé par `---` ; les **commentaires HTML deviennent les notes
+  orateur** du PPTX — donc rien de technique avant la première slide, ce serait la
+  note de la page de titre ;
+- le budget temps est le `[m:ss]` en tête de chaque note ; total actuel **28:45** ;
+- les figures viennent de `../artifacts/figures/` (générées par le notebook) et les
+  captures de `screenshots/docker/` ;
+- les chiffres cités viennent des outputs de `notebooks/decrochage_etudiant.ipynb` :
+  toute réexécution qui les modifie doit être répercutée dans les slides **et** dans
+  l'antisèche ci-dessus.

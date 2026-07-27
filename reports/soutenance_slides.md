@@ -19,24 +19,6 @@ style: |
   section pre, section code { font-size: 0.8em; }
 ---
 
-<!--
-========================================================================
-SOURCE DES SLIDES — genere SUPPORT_SOUTENANCE.pptx.
-Format : Marp (https://marp.app).
-  - VS Code : extension « Marp for VS Code » → clic droit → Export slide deck → PDF/PPTX.
-  - CLI     : npx @marp-team/marp-cli soutenance_slides.md --pptx --allow-local-files -o SUPPORT_SOUTENANCE.pptx
-Le conducteur d'oral (minutage, phrases, reponses aux questions) est dans
-SUPPORT_SOUTENANCE.md — a tenir a jour avec ce fichier.
-Chaque slide est séparée par « --- ». Les blocs de commentaires HTML sont les NOTES
-ORATEUR (deviennent les notes du présentateur en PPTX ; invisibles à l'écran).
-Cible : 30 min de présentation + 30 min de questions. 35 slides dont 2 de backup.
-Budget temps indiqué par slide : total 28 min 45 → marge de ~1 min sur les 30 min imparties.
-Les figures sont dans ../artifacts/figures/ (générées par le notebook).
-Les chiffres cités sont ceux des outputs de notebooks/decrochage_etudiant.ipynb :
-toute modification du notebook doit être répercutée ici.
-========================================================================
--->
-
 # Détection précoce du décrochage étudiant en L1
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
