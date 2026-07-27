@@ -73,14 +73,15 @@ RIGUEUR anti-fuite et l'EXPLICABILITÉ, parce que ce sont des données
 
 ## Ma démarche — et sa trace écrite
 
-**11 journées documentées**, de la découverte du sujet à la reprise finale → `notebooks/journal_de_bord.ipynb`.
+**10 journées documentées + un bilan final** → `notebooks/journal_de_bord.ipynb`.
 
 | Jours | Décision structurante de la période |
 |---|---|
 | **1-3** | AUC > 0,95 au premier essai → deux fuites identifiées → **périmètre verrouillé dans le code** |
 | **4-6** | Nettoyage en module · imputation **dans** la Pipeline · **seuil choisi par coût métier** |
 | **7-9** | Package unique · médaillon + pseudonymisation · architecture · **Run vérifié dans Docker** |
-| **10-11** | Bilan, puis reprise : **mesurer** le coût de calcul au lieu de l'affirmer |
+| **10** | Relecture à froid → **mesurer** le coût de calcul au lieu de l'affirmer |
+| **Bilan** | Ce que je referais à l'identique, ce qui reste à creuser |
 
 > Chaque grande étape du notebook se termine par un encadré *JdB* : la décision **et** sa justification, écrites au moment où je les prends.
 
@@ -714,7 +715,7 @@ table { font-size: 0.74em; }
 | **C8** Performance & impacts | AUC/rappel/F1, SHAP, équité, régression | notebook §12 |
 | **C9** Amélioration continue | PSI, politique de réentraînement, MLflow, alertes | notebook §13 · `monitoring.py` · `operations.py` |
 
-Journal de bord : `notebooks/journal_de_bord.ipynb` — 11 journées datées.
+Journal de bord : `notebooks/journal_de_bord.ipynb` — 10 journées datées + bilan.
 
 <!--
 Slide de secours pour un jury qui coche un référentiel : permet de pointer
