@@ -39,8 +39,10 @@ toute modification du notebook doit être répercutée ici.
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Staudt Michael** · *25/07/2026* · v1.4
+**Staudt Michael** · *27/07/2026* · v1.5
 Python 3.13 · scikit-learn · FastAPI · Postgres · MLflow · Prometheus/Grafana · C1→C9
+
+📦 **Code, tests et documentation** : [github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)
 
 <!--
 [0:30] Se présenter, annoncer le sujet en une phrase :
@@ -661,6 +663,8 @@ sur données réelles. »
 - **Prototype Run vérifiable** : HTTPS, métriques, alertes, heartbeat, promotion humaine et rollback.
 - **RGPD documenté et implémenté** dès la persistance.
 
+📦 Code complet, tests, CI et documentation : **[github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)**
+
 **Merci — vos questions ?**
 
 <!--
@@ -719,6 +723,8 @@ table { font-size: 0.74em; }
 | **C9** Amélioration continue | PSI, politique de réentraînement, MLflow, alertes | notebook §13 · `monitoring.py` · `operations.py` |
 
 Journal de bord : `notebooks/journal_de_bord.ipynb` — 10 journées datées + bilan.
+
+Tous ces chemins sont consultables sur **[github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)**.
 
 <!--
 Slide de secours pour un jury qui coche un référentiel : permet de pointer
