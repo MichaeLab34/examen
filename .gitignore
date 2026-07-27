@@ -44,3 +44,6 @@ reports/screenshots/docker/qa-docker-demo.webm
 .vscode/
 .idea/
 .claude/
+
+# Mesures d'eco-conception (CodeCarbon) : dependantes de la machine
+artifacts/ecodesign/

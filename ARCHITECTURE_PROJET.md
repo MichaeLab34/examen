@@ -157,7 +157,7 @@ DataFrame brut (SI+LMS)
 |---|---|---|
 | Technique | ~5 200 étudiants/an, latence non critique | Batch hebdomadaire, modèle linéaire léger |
 | RGPD | Données scolaires sensibles | Finalité limitée, pseudonymisation HMAC, rétention, audit log, décision humaine, information étudiants |
-| Éco-conception | Sobriété | Régression logistique (coût de calcul négligeable) |
+| Éco-conception | Sobriété du calcul, mesurée et non affirmée | Coût d'entraînement instrumenté (`ecodesign.py`, CodeCarbon) : le boosting coûte ~12 à 23 × la régression logistique pour une AUC équivalente ou inférieure. Leviers par impact décroissant : réentraînement **annuel** (et non mensuel), modèle linéaire, VPS sans orchestrateur, minimisation des features, scoring par batch semestriel, purge à échéance |
 | Organisationnelle | Adoption équipes | Explicabilité (coefficients, SHAP), score = aide |
 | Économique | Budget d'accompagnement limité | Priorisation par score (top-K) selon capacité tuteurs |
 
