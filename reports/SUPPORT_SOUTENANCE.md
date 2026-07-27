@@ -27,8 +27,8 @@ Format : Marp (https://marp.app).
   - CLI     : npx @marp-team/marp-cli SUPPORT_SOUTENANCE.md --pptx   (ou --pdf)
 Chaque slide est séparée par « --- ». Les blocs de commentaires HTML sont les NOTES
 ORATEUR (deviennent les notes du présentateur en PPTX ; invisibles à l'écran).
-Cible : 30 min de présentation + 30 min de questions. 32 slides dont 2 de backup.
-Budget temps indiqué par slide : total 27 min 45 → marge de ~2 min sur les 30 min imparties.
+Cible : 30 min de présentation + 30 min de questions. 34 slides dont 2 de backup.
+Budget temps indiqué par slide : total 28 min 45 → marge de ~1 min sur les 30 min imparties.
 Les figures sont dans ../artifacts/figures/ (générées par le notebook).
 Les chiffres cités sont ceux des outputs de notebooks/decrochage_etudiant.ipynb :
 toute modification du notebook doit être répercutée ici.
@@ -58,7 +58,7 @@ Annoncer la durée et qu'on prendra les questions à la fin.
 2. **Données** et les 3 pièges à éviter
 3. **Éthique & RGPD**
 4. **Préparation** & anti-fuite
-5. **Modèle** : choix, entraînement, seuil
+5. **Modèle** : choix, **coût de calcul**, entraînement, seuil
 6. **Résultats** & explicabilité
 7. **Industrialisation & Run** : API, Docker, registre, alertes, rollback
 8. **Limites & recommandations**
@@ -73,14 +73,14 @@ RIGUEUR anti-fuite et l'EXPLICABILITÉ, parce que ce sont des données
 
 ## Ma démarche — et sa trace écrite
 
-**10 journées documentées**, de la découverte du sujet au bilan → `notebooks/journal_de_bord.ipynb`.
+**11 journées documentées**, de la découverte du sujet à la reprise finale → `notebooks/journal_de_bord.ipynb`.
 
 | Jours | Décision structurante de la période |
 |---|---|
 | **1-3** | AUC > 0,95 au premier essai → deux fuites identifiées → **périmètre verrouillé dans le code** |
 | **4-6** | Nettoyage en module · imputation **dans** la Pipeline · **seuil choisi par coût métier** |
 | **7-9** | Package unique · médaillon + pseudonymisation · architecture · **Run vérifié dans Docker** |
-| **10** | Bilan : ce que je referais à l'identique, ce qui reste à creuser |
+| **10-11** | Bilan, puis reprise : **mesurer** le coût de calcul au lieu de l'affirmer |
 
 > Chaque grande étape du notebook se termine par un encadré *JdB* : la décision **et** sa justification, écrites au moment où je les prends.
 
@@ -248,6 +248,38 @@ l'accuracy). Montrer les courbes ROC superposées. Le message : « à performanc
 égale, je choisis le modèle le plus EXPLICABLE et le plus SOBRE — c'est ce
 qu'exige le contexte. » Question probable : « pourquoi pas XGBoost ? » → pas de
 gain d'AUC ici, et moins explicable.
+-->
+
+---
+
+## 7.1 Éco-conception : ce que coûte un point d'AUC — C4
+
+Le coût de calcul est **mesuré** pendant la comparaison (CodeCarbon, mix français) :
+
+| Modèle | Coût de calcul | AUC validation | Coût / point d'AUC |
+|---|---|---|---|
+| **Régression logistique** *(retenu)* | référence **× 1** | **0,949** | — |
+| XGBoost | **× 12** | 0,948 | **∞** (aucun gain) |
+| Random Forest | **× 23** | 0,942 | **∞** (aucun gain) |
+
+**Les 6 leviers, par impact réel** — et le modèle n'est que le deuxième :
+
+**1.** Réentraînement **annuel** et non mensuel → 11 entraînements évités par an  
+**2.** Modèle **linéaire** : ni GPU ni cluster · **3.** Pas de **Kubernetes** (§15)  
+**4.** **Minimisation** des features (31) · **5.** Scoring **par batch**, pas de temps réel  
+**6.** **Purge** des lots expirés à échéance
+
+> Total mesuré pour toute la comparaison : **0,022 Wh**. La sobriété se joue sur la
+> fréquence, pas sur l'algorithme.
+
+<!--
+[1:00] Point souvent survolé : je l'ai MESURÉ au lieu de l'affirmer. Deux messages.
+(1) Le boosting coûte 12 à 23 fois plus cher pour zéro gain : le coût par point
+d'AUC est infini, l'arbitrage est tranché par les chiffres, pas par une préférence.
+(2) Honnêteté : 0,022 Wh, c'est dérisoire. Le vrai levier est la FRÉQUENCE de
+réentraînement et le dimensionnement — dire l'inverse serait du green-washing.
+Limite à assumer si on questionne : sous Windows la mesure CPU est approximative,
+elle sert à comparer les modèles entre eux, pas à publier une empreinte absolue.
 -->
 
 ---
@@ -615,11 +647,16 @@ les questions avec assurance.
 ---
 
 <!-- _paginate: false -->
+<style scoped>
+section { font-size: 21px; }
+</style>
+
 ## Backup — questions probables du jury
 
 - **Fuites ?** → 3 pièges + `assert_no_leakage` + périmètre codé.
 - **AUC 0,95 = fuite ?** → non : verrou + données synthétiques ; à revalider.
-- **Pourquoi LogReg et pas XGBoost ?** → même AUC, plus explicable/sobre.
+- **Pourquoi LogReg et pas XGBoost ?** → même AUC, plus explicable, et **12 à 23 × moins de calcul** (mesuré).
+- **Éco-conception ?** → coût mesuré par modèle, coût/point d'AUC, 6 leviers ; le principal est la fréquence de réentraînement.
 - **Choix du seuil ?** → minimisation du coût métier sur validation (FN >> FP).
 - **Équité / RGPD ?** → audit sous-groupes + décision humaine + minimisation.
 - **Bronze contient du brut ?** → oui, zone restreinte de traçabilité ; Silver/Gold protègent l'usage.
@@ -649,14 +686,14 @@ table { font-size: 0.74em; }
 | **C1** Cadrage & données | besoin, deux cibles, sources, gouvernance | notebook §2-3 + *JdB* |
 | **C2** Éthique & conformité | proxys, RGPD, art. 22, audit d'équité | notebook §4 · §12.4 · `docs/rgpd_accountability.md` |
 | **C3** Préparation | dédoublonnage, parsing, imputation Pipeline, features | notebook §5-7 · `preprocessing.py` · `features.py` |
-| **C4** Choix du modèle | baseline + 3 familles, ROC/AUC, sobriété | notebook §8 |
+| **C4** Choix du modèle | baseline + 3 familles, ROC/AUC, coût de calcul mesuré | notebook §8 · §8.3 · `ecodesign.py` |
 | **C5** Entraînement | split 3 voies, CV stratifiée, seuil par coût | notebook §9 · `training.py` |
 | **C6** Implémentation | bundle joblib, CLI, API FastAPI, contrat I/O | notebook §10 · `serving.py` · `api.py` |
-| **C7** Architecture | médaillon, contraintes, dimensionnement, TCO | notebook §11 · `ARCHITECTURE_PROJET.md` |
+| **C7** Architecture | médaillon, contraintes, dimensionnement, éco-conception, TCO | notebook §11 · `ARCHITECTURE_PROJET.md` |
 | **C8** Performance & impacts | AUC/rappel/F1, SHAP, équité, régression | notebook §12 |
 | **C9** Amélioration continue | PSI, politique de réentraînement, MLflow, alertes | notebook §13 · `monitoring.py` · `operations.py` |
 
-Journal de bord : `notebooks/journal_de_bord.ipynb` — 10 journées datées.
+Journal de bord : `notebooks/journal_de_bord.ipynb` — 11 journées datées.
 
 <!--
 Slide de secours pour un jury qui coche un référentiel : permet de pointer
