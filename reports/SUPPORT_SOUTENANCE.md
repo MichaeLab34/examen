@@ -90,7 +90,7 @@ jeu, je ne le prononce pas. **➜** = ma phrase d'enchaînement vers la slide su
 **de X à Y** = la plage horaire où je dois être sur cette slide ; « n min à tenir » =
 le temps que je dois y passer.
 
-**Le texte entier fait ~4 040 mots**, soit **28 minutes à un débit normal de
+**Le texte entier fait ~4 110 mots**, soit **28 minutes à un débit normal de
 présentation** (~145 mots/min). C'est le rythme à tenir : ni précipité, ni traînant.
 
 Si une slide me paraît courte à l'écran, c'est normal : la slide affiche l'ossature,
@@ -101,8 +101,8 @@ minute. Je débite un peu plus vite sur les scènes denses et je respire sur les
 
 | | Slides |
 |---|---|
-| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 14, 19** |
-| 🫁 **Avec marge** — je ralentis, je laisse des silences | **13, 16, 17, 20, 23-29, 33** |
+| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 13, 14, 19** |
+| 🫁 **Avec marge** — je ralentis, je laisse des silences | **16, 17, 20, 23-29, 33** |
 
 Les denses sont celles où j'explique un mécanisme (les fuites, les proxys, les
 leurres, le coût métier) : c'est exactement ce que le jury évalue, je ne le sacrifie
@@ -336,7 +336,7 @@ l'entraînement. »
 
 > ⏩ **La plus dense du déroulé** — ~1 min 35 de texte pour une minute prévue.
 > J'avance sans traîner : l'explication des leurres est un point fort, je ne la
-> sacrifie pas. Je rattrape sur les slides 13, 16 et 20.
+> sacrifie pas. Je rattrape sur les slides 16, 20 et 33.
 
 **Je dis :**
 
@@ -444,17 +444,23 @@ et la purge — servent d'ailleurs autant le RGPD que la sobriété. »
 
 **Je dis :**
 
-« Pour l'entraînement, un découpage en trois : train, validation, test. Le train pour
-apprendre, la validation pour comparer les modèles et choisir le seuil, le test
-uniquement pour l'évaluation finale.
+« Pour l'entraînement, un découpage en trois : train, validation, test.
 
-Je le dis explicitement : le test n'a jamais servi à choisir quoi que ce soit. Sinon
-il ne mesure plus rien.
+Le train sert à apprendre. La validation sert à **choisir** : les hyperparamètres, le
+modèle, le seuil.
 
-Les hyperparamètres sont réglés par validation croisée stratifiée, sur le train
-seulement. Et le point rassurant : l'AUC obtenue en validation croisée est équivalente
-à celle mesurée sur le test mis de côté. C'est le signe qu'il n'y a pas de
-surapprentissage.
+Et le test sert à une seule chose — **mesurer**, une fois et à la fin, ce que vaut le
+modèle sur des données qu'il n'a jamais vues. C'est mon estimation de ce qu'il fera en
+production.
+
+Pourquoi ne jamais s'en servir pour choisir ? Parce que si j'avais ajusté un seul
+paramètre en regardant le test, j'aurais adapté mes décisions à ce jeu-là, et le
+chiffre final serait devenu flatteur. C'est comme réviser sur le sujet de l'examen :
+la note ne dit plus ce qu'on sait vraiment.
+
+Les hyperparamètres sont donc réglés par validation croisée, sur le train seulement.
+Et le point rassurant : l'AUC en validation croisée est équivalente à celle mesurée
+sur le test. C'est le signe qu'il n'y a pas de surapprentissage.
 
 Sur le déséquilibre — 28 % de positifs — j'ai utilisé une pondération des classes
 plutôt qu'un sur-échantillonnage type SMOTE, parce que la pondération préserve la
