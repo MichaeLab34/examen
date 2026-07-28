@@ -90,18 +90,23 @@ jeu, je ne le prononce pas. **➜** = ma phrase d'enchaînement vers la slide su
 **de X à Y** = la plage horaire où je dois être sur cette slide ; « n min à tenir » =
 le temps que je dois y passer.
 
-**Le texte entier fait ~3 840 mots.** Débité vite (150 mots/min) : 25 min — il me
-reste de la marge. Débité **posément** (130 mots/min, silences compris) : **29 min**,
-soit exactement le temps imparti. Donc : je peux parler lentement, articuler, et
-laisser des silences. C'est le bon rythme pour un oral.
+**Le texte entier fait ~4 040 mots**, soit **28 minutes à un débit normal de
+présentation** (~145 mots/min). C'est le rythme à tenir : ni précipité, ni traînant.
 
 Si une slide me paraît courte à l'écran, c'est normal : la slide affiche l'ossature,
 c'est **moi** qui porte le contenu. Le texte ci-dessous est ce que la slide ne dit pas.
 
 **Règle en cas de dépassement** : je ne coupe jamais une explication pour tenir la
-minute — je débite un peu plus vite et je rattrape sur les scènes marquées ⏩, qui
-sont volontairement en dessous de leur budget. Ce qu'on retient d'un oral, c'est une
-explication claire, pas un chronomètre respecté à la seconde.
+minute. Je débite un peu plus vite sur les scènes denses et je respire sur les autres.
+
+| | Slides |
+|---|---|
+| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 14, 19** |
+| 🫁 **Avec marge** — je ralentis, je laisse des silences | **13, 16, 17, 20, 23-29, 33** |
+
+Les denses sont celles où j'explique un mécanisme (les fuites, les proxys, les
+leurres, le coût métier) : c'est exactement ce que le jury évalue, je ne le sacrifie
+pas au chronomètre.
 
 ---
 
@@ -329,9 +334,9 @@ l'entraînement. »
 
 ### 🎬 Slide 9 · *6. EDA* — **de 9:00 à 10:00** · 1 min à tenir
 
-> ⏩ **Scène dense** — le texte fait ~1 min 15. Je débite un peu plus vite ici :
-> l'explication des leurres est un point fort, je ne la sacrifie pas. Je rattrape
-> sur les slides 10, 13 et 16, qui sont plus courtes que leur minute.
+> ⏩ **La plus dense du déroulé** — ~1 min 35 de texte pour une minute prévue.
+> J'avance sans traîner : l'explication des leurres est un point fort, je ne la
+> sacrifie pas. Je rattrape sur les slides 13, 16 et 20.
 
 **Je dis :**
 
@@ -376,15 +381,18 @@ pipeline : régression logistique, forêt aléatoire, gradient boosting.
 Je les compare par l'AUC, parce qu'elle est insensible au seuil et au déséquilibre
 des classes — contrairement à l'accuracy, qui serait trompeuse avec 28 % de positifs.
 
-Le résultat : le boosting n'apporte aucun gain d'AUC significatif face à la
-régression logistique.
+Mon réflexe de départ était « sur du tabulaire, XGBoost gagne ». Ici, non : les trois
+modèles se tiennent au millième d'AUC près. Et sur un millier d'étudiants, un écart
+aussi petit peut venir du simple hasard de l'échantillon — je ne peux donc pas
+affirmer qu'un modèle est meilleur qu'un autre.
 
-Mon réflexe de départ était pourtant « sur du tabulaire, XGBoost gagne ». Ici, non.
+Alors je ne paie pas ce millième. Entre deux modèles qui font la même chose, je prends
+celui que je peux expliquer.
 
-Et comme je dois pouvoir expliquer à un référent pédagogique pourquoi tel étudiant est
-signalé, je retiens la régression logistique : ses coefficients se lisent, ceux d'un
-boosting non. J'assume l'arbitrage — l'explicabilité l'emporte sur un gain marginal
-et non significatif. »
+Avec une régression logistique, je peux dire à un référent : « cet étudiant est
+signalé parce que sa présence a chuté et qu'il accumule les retards de rendu ». Avec
+un boosting, je ne peux pas — et un référent qui ne comprend pas le signalement ne
+s'en servira pas. »
 
 ---
 
