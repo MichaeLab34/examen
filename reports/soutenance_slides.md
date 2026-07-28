@@ -23,7 +23,7 @@ style: |
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Staudt Michael** · *27/07/2026* · v1.5
+**Staudt Michael** · *28/07/2026* · v1.6
 Python 3.13 · scikit-learn · FastAPI · Postgres · MLflow · Prometheus/Grafana · C1→C9
 
 📦 **Code, tests et documentation** : [github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)
@@ -59,7 +59,7 @@ RIGUEUR anti-fuite et l'EXPLICABILITÉ, parce que ce sont des données
 
 ## Ma démarche — et sa trace écrite
 
-**10 journées documentées + un bilan final** → `notebooks/journal_de_bord.ipynb`.
+**11 journées documentées + un bilan final** → `notebooks/journal_de_bord.ipynb`.
 
 | Jours | Décision structurante de la période |
 |---|---|
@@ -706,7 +706,7 @@ table { font-size: 0.74em; }
 | **C8** Performance & impacts | AUC/rappel/F1, SHAP, équité, régression | notebook §12 |
 | **C9** Amélioration continue | PSI, politique de réentraînement, MLflow, alertes | notebook §13 · `monitoring.py` · `operations.py` |
 
-Journal de bord : `notebooks/journal_de_bord.ipynb` — 10 journées datées + bilan.
+Journal de bord : `notebooks/journal_de_bord.ipynb` — 11 journées datées + bilan.
 
 Tous ces chemins sont consultables sur **[github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)**.
 

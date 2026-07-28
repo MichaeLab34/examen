@@ -172,7 +172,7 @@ le jury sait lire.)*
 
 **Je dis :**
 
-« Avant les résultats, un mot sur ma méthode. J'ai tenu un journal de bord : dix
+« Avant les résultats, un mot sur ma méthode. J'ai tenu un journal de bord : onze
 journées datées, plus un bilan. Chaque décision importante y est écrite au moment où
 je la prends, avec sa justification.
 
