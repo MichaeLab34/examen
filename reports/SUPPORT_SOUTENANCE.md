@@ -66,7 +66,7 @@ Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramèn
 | Leurres | écart-type **1,6 à 2,3 pts** → aucun signal | slide 9 |
 | Éco-conception | boosting ≈ **×10**, RF ≈ **×20-30**, gain nul | slide 11 |
 | Tests | **52** tests, CI verte | slide 18 — *chiffre affiché ; 59 dans le dépôt* |
-| Budget infra | **10-20 €/mois** (ordre de grandeur) | slide 20 |
+| Budget infra | **0 €** sur le serveur du LMS · sinon **10-20 €/mois** | slide 20 |
 
 ---
 
@@ -631,20 +631,21 @@ La protection est donc dans la plomberie, pas dans une note d'intention. »
 
 « Sur le dimensionnement, j'ai commencé par réfléchir en « architecture idéale », puis
 je suis revenu aux chiffres : 5 200 étudiants par an, un scoring par semestre, une API
-très peu sollicitée.
+très peu sollicitée. Kubernetes n'apporte rien ici — ce serait un cluster à maintenir
+et à payer pour une charge qui tient largement sur une machine.
 
-Dans ces conditions, Kubernetes n'apporte rien — ce serait un cluster à maintenir et à
-payer pour une charge qui tient largement sur une machine.
+Deux options, donc. Un serveur européen loué, pour dix à vingt euros par mois. Ou,
+plus intéressant : l'université dispose déjà d'un serveur, celui qui héberge le LMS.
+Les données d'engagement en viennent — elles ne sortiraient donc jamais du système
+d'information de l'établissement. Pas d'hébergeur tiers, pas de sous-traitant
+supplémentaire à encadrer au sens du RGPD, et pas de coût d'hébergement.
 
-Je propose donc un serveur européen conteneurisé, avec un reverse-proxy qui gère HTTPS
-automatiquement, une base Postgres sauvegardée en dehors de l'hôte, et les secrets
-hors du dépôt.
+La condition, c'est le cloisonnement : le scoring tourne dans son propre conteneur,
+avec des ressources plafonnées, pour qu'un entraînement ne vienne jamais dégrader le
+LMS en pleine période de partiels.
 
-L'ordre de grandeur est de dix à vingt euros par mois, plus un environnement de test.
-Ce sont des ordres de grandeur à confirmer avec la DSI, pas un devis.
-
-Et la portabilité vient des conteneurs : si le besoin change, on déplace sans
-réécrire. »
+Et c'est précisément ce que la conteneurisation apporte : la même image tourne chez un
+hébergeur ou sur le serveur de l'université. Le choix se tranche avec la DSI. »
 
 ---
 
@@ -854,7 +855,8 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **Et la dérive en production ?** | `drift-report` (PSI), seuils `watch`/`alert`, persistance en Gold ; dérive = investigation. |
 | **Pourquoi pas un réentraînement mensuel ?** | Les labels d'abandon arrivent **par cohorte** : réentraîner mensuellement, c'est apprendre sur des étiquettes inexistantes. |
 | **Si le modèle se dégrade ?** | Gate chiffrée (AUC, rappel, équité) + approbation humaine + alias MLflow et rollback. |
-| **Pourquoi pas Kubernetes ?** | 5 200 étudiants/an, batch rejouable : un VPS conteneurisé est proportionné. |
+| **Pourquoi pas Kubernetes ?** | 5 200 étudiants/an, batch rejouable : une seule machine suffit. |
+| **Où hébergeriez-vous la solution ?** | De préférence sur le serveur qui héberge déjà le LMS : les données ne sortent pas du SI, pas de sous-traitant supplémentaire, pas de coût d'hébergement. Condition : cloisonnement en conteneur avec ressources plafonnées, pour ne pas dégrader le LMS. Le VPS reste l'option de repli. |
 | **Quel ROI ?** | TCO chiffrable, valeur mesurable **par un pilote causal** ; je n'invente aucun gain à partir de l'AUC. |
 | **Un job qui ne tourne plus ?** | Heartbeat externe : c'est l'absence de signal qui déclenche l'alerte. |
 
@@ -901,6 +903,13 @@ prendrais : … » — bien meilleur qu'une improvisation.
 **Circuit quand un chiffre ou un texte change** : modifier `soutenance_slides.md` →
 régénérer sous `soutenance_slides.pptx` → repasser par l'outil de mise en forme →
 remplacer `SUPPORT_SOUTENANCE.pptx` → mettre à jour l'antisèche de ce conducteur.
+
+**⚠️ Écarts entre la source à jour et le PPTX livré** — à corriger si je régénère :
+
+| Sujet | PPTX projeté | Source à jour |
+|---|---|---|
+| Tests (slide 18) | 52 | 59 |
+| Hébergement (slide 20) | VPS uniquement | serveur du LMS **ou** VPS |
 
 **État actuel du livrable** : 33 slides (les 2 slides de backup de la source n'y sont
 pas — voir la section Questions ci-dessus, qui les remplace), notes orateur présentes

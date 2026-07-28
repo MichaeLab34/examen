@@ -429,11 +429,11 @@ decrochage medallion-load.
 
 | Choix | Décision adaptée au projet |
 |---|---|
-| Hébergement | **VPS européen conteneurisé** ; serverless à réévaluer, Kubernetes écarté |
+| Hébergement | **Serveur du LMS, déjà en place** (données dans le SI, pas de tiers) ou VPS européen conteneurisé ; Kubernetes écarté |
 | Sécurité réseau | **Caddy** reverse-proxy + HTTPS automatique |
 | Données | Postgres sur le VPS, sauvegarde hors hôte, secrets hors Git |
 | Disponibilité | `/health` + `/ready` ; pas de haute disponibilité sans SLA |
-| Budget indicatif | **10–20 €/mois**, +5–10 € pour un environnement de test |
+| Budget indicatif | **0 €** sur l'existant · sinon **10–20 €/mois**, +5–10 € pour un environnement de test |
 
 La portabilité vient des conteneurs : évoluer plus tard sans réécrire le service.
 
