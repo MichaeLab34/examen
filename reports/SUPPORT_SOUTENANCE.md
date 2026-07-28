@@ -101,7 +101,7 @@ minute. Je débite un peu plus vite sur les scènes denses et je respire sur les
 
 | | Slides |
 |---|---|
-| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 13, 14, 17, 19** |
+| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 13, 14, 17, 19, 21** |
 | 🫁 **Avec marge** — je ralentis, je laisse des silences | **20, 23 à 29, 33** |
 
 Les denses sont celles où j'explique un mécanisme (les fuites, les proxys, les
@@ -649,23 +649,29 @@ hébergeur ou sur le serveur de l'université. Le choix se tranche avec la DSI. 
 
 **Je dis :**
 
-« La politique de réentraînement, maintenant — et c'est un point où j'ai changé
-d'avis.
+« La politique de réentraînement.
 
 Mon premier réflexe était de réentraîner tous les mois. Ça n'a pas de sens ici : la
-vérité terrain, c'est-à-dire le fait qu'un étudiant ait abandonné ou non, n'est connue
-qu'une fois la cohorte terminée. Réentraîner mensuellement, ce serait réapprendre sur
-des étiquettes qui n'existent pas encore.
+vérité terrain — savoir si un étudiant a abandonné — n'arrive qu'une fois la cohorte
+terminée. Réentraîner mensuellement, ce serait réapprendre sur des étiquettes qui
+n'existent pas encore.
 
-La politique retenue : un contrôle du data drift à chaque lot, par le PSI de chaque
-variable numérique. Au-delà du seuil d'alerte, ça déclenche une investigation sur la
-collecte — pas un réentraînement à l'aveugle. Le réentraînement, lui, est annuel,
-quand les nouvelles étiquettes arrivent.
+Alors pourquoi surveiller la dérive à chaque lot, si le réentraînement est annuel ?
+Parce qu'entre deux entraînements, le modèle continue de scorer — et que je ne peux
+pas mesurer sa performance réelle, faute de labels. Le PSI des variables d'entrée est
+mon seul indicateur disponible.
 
-Chaque entraînement est tracé dans MLflow. Un candidat ne passe en production que
-s'il franchit une gate chiffrée — AUC, rappel, écart d'équité — et après validation
-humaine. En cas de problème, on repointe l'alias `production` sur la version
-précédente : c'est un rollback en une commande. »
+Il me sert à deux choses. Détecter une rupture de collecte : une variable qui cesse
+d'être alimentée, une échelle qui change après une mise à jour du LMS. Et voir si la
+population a trop changé pour que le modèle reste valide — auquel cas je suspends
+l'usage plutôt que d'alerter à tort.
+
+Le calendrier annuel est donc un filet de sécurité, pas le seul déclencheur : si la
+dérive alerte **et** que des labels frais existent, on entraîne un candidat plus tôt.
+
+Ce candidat ne passe en production qu'après une gate chiffrée — AUC, rappel, écart
+d'équité — et une validation humaine. Sinon, rollback : l'alias `production` repointe
+la version précédente. »
 
 ---
 
@@ -849,6 +855,7 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **Comment se fait la purge, concrètement ?** | Chaque lot porte un `expires_at` (rétention configurable, 365 j par défaut). `decrochage purge-expired` sélectionne les lots échus, supprime en cascade Bronze/Silver/Gold/prédictions/rapports, et écrit une entrée `retention_purge` dans le journal d'audit. À planifier en production — le scheduler actuel ne gère que dérive et réentraînement. |
 | **Bronze contient des données personnelles ?** | Oui, assumé : zone restreinte de traçabilité et de reprise, purgée ; Silver et Gold sont pseudonymisés. |
 | **Et la dérive en production ?** | `drift-report` (PSI), seuils `watch`/`alert`, persistance en Gold ; dérive = investigation. |
+| **Pourquoi surveiller la dérive si vous réentraînez annuellement ?** | Parce que je score entre deux entraînements sans pouvoir mesurer la performance (pas de labels). Le PSI est le seul signal disponible : il détecte une rupture de collecte et me dit si la population reste celle du modèle. Et si la dérive alerte **et** que des labels frais existent, `decide_retraining` autorise un candidat anticipé — l'annuel est un filet, pas le seul déclencheur. |
 | **Pourquoi pas un réentraînement mensuel ?** | Les labels d'abandon arrivent **par cohorte** : réentraîner mensuellement, c'est apprendre sur des étiquettes inexistantes. |
 | **Si le modèle se dégrade ?** | Gate chiffrée (AUC, rappel, équité) + approbation humaine + alias MLflow et rollback. |
 | **Pourquoi pas Kubernetes ?** | 5 200 étudiants/an, batch rejouable : une seule machine suffit. |
