@@ -90,7 +90,7 @@ jeu, je ne le prononce pas. **➜** = ma phrase d'enchaînement vers la slide su
 **de X à Y** = la plage horaire où je dois être sur cette slide ; « n min à tenir » =
 le temps que je dois y passer.
 
-**Le texte entier fait ~4 110 mots**, soit **28 minutes à un débit normal de
+**Le texte entier fait ~4150 mots**, soit **28 minutes à un débit normal de
 présentation** (~145 mots/min). C'est le rythme à tenir : ni précipité, ni traînant.
 
 Si une slide me paraît courte à l'écran, c'est normal : la slide affiche l'ossature,
@@ -101,8 +101,8 @@ minute. Je débite un peu plus vite sur les scènes denses et je respire sur les
 
 | | Slides |
 |---|---|
-| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 13, 14, 19** |
-| 🫁 **Avec marge** — je ralentis, je laisse des silences | **16, 17, 20, 23-29, 33** |
+| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 13, 14, 17, 19** |
+| 🫁 **Avec marge** — je ralentis, je laisse des silences | **20, 23 à 29, 33** |
 
 Les denses sont celles où j'explique un mécanisme (les fuites, les proxys, les
 leurres, le coût métier) : c'est exactement ce que le jury évalue, je ne le sacrifie
@@ -551,14 +551,16 @@ demande le détail — pas maintenant.)*
 
 **Je dis :**
 
-« Rapidement, la cible secondaire. J'estime la moyenne finale attendue : un R² de
-0,68, avec une erreur moyenne d'environ 2,3 points sur 20.
+« La cible secondaire, demandée par l'énoncé : la moyenne finale.
 
-C'est suffisant pour trier entre un soutien léger et un soutien renforcé. Ce n'est pas
-suffisant pour annoncer une note à un étudiant — et je ne le ferai pas.
+Attention à ne pas confondre avec ce que j'ai dit tout à l'heure. Je l'ai exclue des
+variables **explicatives**, parce qu'elle constituait une fuite pour prédire l'abandon.
+Ici, elle n'est pas en entrée : elle est en **sortie**. C'est un second modèle,
+entraîné sur les mêmes 31 variables disponibles à mi-semestre, qui la prédit.
 
-Et bien sûr, cette variable reste exclue des variables explicatives du modèle de
-classification. »
+R² de 0,68, erreur moyenne d'environ 2,3 points sur 20. De quoi calibrer l'intensité
+de l'accompagnement — soutien léger ou renforcé. Pas de quoi annoncer une note à un
+étudiant, et je ne le ferai pas. »
 
 **➜** « Passons maintenant à la mise en exploitation. »
 
@@ -832,6 +834,7 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **95 % d'AUC, c'est suspect** | Périmètre verrouillé + réaudit colonne par colonne + **données synthétiques à signal fort** ; à revalider sur données réelles. |
 | **Pourquoi pas XGBoost ?** | AUC équivalente, mais moins explicable et **un ordre de grandeur de calcul en plus** — je l'ai mesuré. |
 | **Éco-conception ?** | Coût mesuré par modèle, coût par point d'AUC, 6 leviers ; le principal est la **fréquence de réentraînement**. |
+| **Pourquoi prédire `moyenne_finale` si vous l'avez exclue ?** | Exclue comme variable **explicative** (c'était la fuite), pas comme **cible**. Le modèle de régression la prédit à partir des mêmes 31 variables de mi-semestre : elle est en sortie, jamais en entrée. |
 | **Pourquoi ce seuil ?** | Minimisation du coût métier sur la **validation** ; FN 5× plus coûteux qu'un FP ; le test reste intact. |
 | **Votre modèle discrimine-t-il ?** | Retirer `sexe` ne suffit pas (proxys) → audit par sous-groupes, écart de rappel 1,9 pt, et décision humaine. **Tableau complet : notebook §12.4.** |
 | **Bronze contient des données personnelles ?** | Oui, assumé : zone restreinte de traçabilité et de reprise, purgée ; Silver et Gold sont pseudonymisés. |
