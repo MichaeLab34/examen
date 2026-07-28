@@ -538,13 +538,12 @@ sous-groupe : femmes, hommes, boursiers, non-boursiers, établissement d'origine
 rappels vont de 0,935 à 0,975, soit un écart maximal de 1,9 point — très en dessous
 du seuil d'alerte de dix points que je me suis fixé.
 
-Le modèle ne traite donc pas un groupe moins bien qu'un autre. Le tableau complet,
-sous-groupe par sous-groupe avec les effectifs, est dans le notebook en section 12.4 —
-je peux vous l'ouvrir. »
+Le modèle ne traite donc pas un groupe moins bien qu'un autre, et le tableau détaillé
+par sous-groupe figure dans le notebook. »
 
-*(Si on demande à voir : notebook §12.4, le tableau donne par groupe l'effectif, le
-taux d'abandon réel, le taux d'alerte et le rappel. L'écart maximal y est calculé :
-0,019.)*
+*(La preuve est en §12.4 : effectif, taux d'abandon réel, taux d'alerte et rappel par
+groupe, avec l'écart maximal calculé à 0,019. À ouvrir pendant les questions si on
+demande le détail — pas maintenant.)*
 
 ---
 
