@@ -65,7 +65,7 @@ Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramèn
 | Régression | R² ≈ **0,68**, erreur ≈ **2,3 pts/20** | slide 17 |
 | Leurres | écart-type **1,6 à 2,3 pts** → aucun signal | slide 9 |
 | Éco-conception | boosting ≈ **×10**, RF ≈ **×20-30**, gain nul | slide 11 |
-| Tests | **59** tests, CI verte | slide 18 ⚠️ *le PPTX actuel affiche encore 52* |
+| Tests | **52** tests, CI verte | slide 18 — *chiffre affiché ; 59 dans le dépôt* |
 | Budget infra | **10-20 €/mois** (ordre de grandeur) | slide 20 |
 
 ---
@@ -586,11 +586,12 @@ traitement par lots, une API FastAPI avec un contrat d'entrée-sortie explicite 
 scoring à la demande. Les trois importent le même code : je n'ai pas trois versions du
 nettoyage qui finiraient par diverger.
 
-Autour : 59 tests automatisés, une intégration continue, et une image Docker qui ne
+Autour : 52 tests automatisés, une intégration continue, et une image Docker qui ne
 tourne pas en root. »
 
-*(⚠️ La slide projetée affiche encore **52 tests**. Soit je dis « 52 » pour rester
-cohérent avec l'écran, soit je régénère le PPTX avant la soutenance.)*
+*(Je dis 52, le chiffre affiché sur la slide. Le dépôt en compte 59 aujourd'hui —
+j'annonce donc moins que la réalité, ce qui ne pose aucun problème si un examinateur
+lance la suite de tests.)*
 
 ---
 
