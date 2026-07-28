@@ -25,8 +25,8 @@ SI/LMS -> Caddy HTTPS -> FastAPI -> bundle MLflow @production
                          |    +-> Postgres Bronze/Silver/Gold
                          +------> /metrics -> Prometheus -> Grafana -> canal equipe
 
-APScheduler (drift, decision de reentrainement) -> heartbeat externe (silence detecte)
-Drift/performance/labels -> candidat -> gate rappel/AUC/equite -> validation humaine
+APScheduler (derive, decision de reentrainement) -> heartbeat externe (silence detecte)
+Derive/performance/labels -> candidat -> barriere rappel/AUC/equite -> validation humaine
                                                        |-> promotion ou rollback
 ```
 
@@ -58,10 +58,11 @@ en danger un flux temps réel, car le scoring peut être rejoué.
 La fréquence de réentraînement suit la disponibilité réelle des résultats de
 cohorte. La politique livrée combine :
 
-- contrôle drift/qualité à chaque batch ;
-- investigation immédiate si PSI atteint `alert` ;
-- entraînement annuel quand les nouvelles issues sont disponibles ;
-- entraînement anticipé uniquement si dérive/performance et labels frais ;
+- contrôle dérive/qualité à chaque batch ;
+- enquête immédiate si le PSI atteint `alert` ;
+- entraînement annuel quand les résultats de cohorte sont disponibles ;
+- entraînement anticipé uniquement si dérive ou performance le justifient, et
+  seulement avec des labels récents ;
 - promotion semi-automatique après non-régression du rappel, AUC >= 0,85,
   écart de rappel entre sous-groupes <= 10 points et validation humaine.
 
@@ -72,7 +73,7 @@ métriques et bundle en artefact dans l'expérience `decrochage-l1-training`.
 L'API recharge ensuite l'alias via `POST /admin/reload`, protégé par la clé API.
 Chaque version enregistrée référence le `run_id` et l'artefact
 `model_bundle/model_bundle.joblib` qui l'a produite. Le serveur MLflow utilise
-un backend SQLite isolé de la base métier et est exposé sur le port 5000.
+un moteur de stockage SQLite isolé de la base métier et est exposé sur le port 5000.
 
 Les requêtes API sont journalisées en JSON avec horodatage UTC, niveau, logger,
 `request_id`, route, statut et durée, sans payload étudiant. Docker limite chaque
@@ -80,7 +81,7 @@ journal à 10 Mo et conserve cinq fichiers afin de borner l'espace disque.
 
 ## Alertes et silence
 
-Le service expose `/metrics`. Le dashboard Grafana provisionné présente la
+Le service expose `/metrics`. Le tableau de bord Grafana provisionné présente la
 disponibilité, le débit, les statuts HTTP et la latence p95. Grafana attend cinq
 minutes avant d'alerter sur l'indisponibilité ou un taux de 5xx élevé, ce qui
 limite la fatigue d'alerte.

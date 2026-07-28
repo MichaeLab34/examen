@@ -25,7 +25,7 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 **Implémentation** :
 - Bronze : `bronze_student_raw`, `bronze_catalogue_raw` conservent les payloads sources avec `batch_id`, `parse_ok`, `rejected_reason`.
 - Silver : `silver_student`, `silver_catalogue` stockent les lignes nettoyées/normalisées/pseudonymisées.
-- Gold : `gold_training_feature`, `gold_prediction`, `gold_drift_report` stockent features anti-fuite, scores et monitoring.
+- Gold : `gold_training_feature`, `gold_prediction`, `gold_drift_report` stockent les variables anti-fuite, les scores et les rapports de surveillance.
 - CLI : `uv run decrochage init-db` puis `uv run decrochage medallion-load ...`.
 
 **Preuves** :
@@ -68,7 +68,7 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 **Objectif examen** : démontrer un minimum d'industrialisation reproductible et contrôlée.
 
 **Docker** :
-- `Dockerfile` construit une image de serving Python 3.13.
+- `Dockerfile` construit une image de service Python 3.13.
 - L'image tourne avec un utilisateur non-root `appuser`.
 - `compose.yaml` fournit Postgres + API et un profil Run avec Caddy, APScheduler, Prometheus et Grafana.
 
@@ -105,7 +105,7 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 la version 2 puis rollback, l'alias `production` référence la version 1 et la
 version 2 est `archived`.
 
-## 6. Drift PSI et ordonnancement
+## 6. Dérive PSI et ordonnancement
 
 **Objectif examen** : couvrir C9 avec une surveillance simple, compréhensible et chiffrée.
 
@@ -131,7 +131,7 @@ version 2 est `archived`.
 
 **Implémentation** :
 - Prometheus collecte `/metrics`.
-- Le dashboard provisionné affiche disponibilité, débit, erreurs 5xx, latence p95 et statuts HTTP.
+- Le tableau de bord (dashboard) provisionné affiche disponibilité, débit, erreurs 5xx, latence p95 et statuts HTTP.
 - Les alertes attendent cinq minutes avant notification et pointent vers le runbook.
 
 **Preuves** :
@@ -146,31 +146,31 @@ version 2 est `archived`.
 - `docs/runbook.md`
 
 Les journaux de requêtes sont émis en JSON sur stderr avec `request_id`, route,
-statut et durée. Le driver Docker `json-file` applique `max-size=10m` et
+statut et durée. Le pilote de journalisation Docker `json-file` applique `max-size=10m` et
 `max-file=5`, ce qui fournit une rétention locale bornée sans introduire une
 plateforme de centralisation disproportionnée.
 
 **Frontière notebook / exploitation** : le notebook démontre la préparation des données,
 l'entraînement, l'évaluation et l'explicabilité. Il ne peut pas, à lui seul, prouver
-le routage HTTPS, la collecte périodique des métriques, le chargement d'un dashboard
-provisionné ou l'évaluation continue des alertes. Ces éléments nécessitent les services
+le routage HTTPS, la collecte périodique des métriques, le chargement d'un tableau de
+bord provisionné ou l'évaluation continue des alertes. Ces éléments nécessitent les services
 Docker en fonctionnement et sont documentés par des captures Playwright de l'exécution réelle.
 
-## 8. Model Card / Threat Model
+## 8. Fiche modèle (model card) / Modèle de menaces (threat model)
 
 **Objectif examen** : documenter l'usage prévu, les limites et les risques opérationnels/sécurité.
 
-**Model Card** :
+**Fiche modèle** :
 - Usage prévu : aide à la priorisation d'accompagnement à mi-S1.
 - Hors périmètre : décision automatique, sanction, usage hors L1 sans revalidation.
 - Limites : données synthétiques, revalidation réelle nécessaire.
 - Éthique : sous-groupes, décision humaine, minimisation.
 
-**Threat Model** :
+**Modèle de menaces** :
 - Surface : API FastAPI de scoring.
-- Menaces : spoofing, tampering, repudiation, information disclosure, DoS, elevation of privilege.
-- Contrôles : API key, validation Pydantic, limite de débit, `X-Request-ID`, journal sans payload, non-root, rétention et pseudonymisation.
-- Gates réelles : stockage de secrets, chiffrement au repos et validation DPO avant données réelles.
+- Menaces STRIDE : usurpation, altération, répudiation, divulgation d'information, déni de service, élévation de privilèges.
+- Contrôles : clé d'API, validation Pydantic, limite de débit, `X-Request-ID`, journal sans payload, conteneur non-root, rétention et pseudonymisation.
+- Conditions à lever avant le réel : stockage géré des secrets, chiffrement au repos et validation DPO.
 
 **Preuves** :
 - `docs/model_card.md`
@@ -182,7 +182,7 @@ Docker en fonctionnement et sont documentés par des captures Playwright de l'ex
 **Objectif examen** : rendre la couverture des compétences explicite pour ne pas laisser le jury deviner.
 
 **Implémentation** :
-- `docs/competences_c1_c9.md` mappe chaque compétence vers les preuves et la phrase à défendre à l'oral.
+- `docs/competences_c1_c9.md` met en regard chaque compétence, ses preuves et la phrase à défendre à l'oral.
 - Le README pointe vers cette matrice.
 
 **Preuves** :
@@ -199,6 +199,6 @@ En soutenance, ne pas présenter ces ajouts comme une usine technique. Les prés
 3. API / CLI : rejouer hors notebook.
 4. Docker / CI : reproduire et vérifier.
 5. MLflow et ordonnanceur : tracer les expériences et produire des candidats contrôlés.
-6. Drift PSI et Grafana : surveiller les données et le service.
-7. Model card / threat model : documenter usage, limites et risques.
+6. Dérive PSI et Grafana : surveiller les données et le service.
+7. Fiche modèle et modèle de menaces : documenter usage, limites et risques.
 8. Matrice C1 → C9 : prouver la conformité au référentiel.

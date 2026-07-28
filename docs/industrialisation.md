@@ -29,7 +29,7 @@ opérations en ligne de commande et la surveillance.
   stocker le résultat de surveillance dans la table Gold.
 - `decrochage serve` démarre le service FastAPI.
 - `decrochage retraining-decision ...` sépare l'enquête sur la dérive d'un
-  réentraînement supervisé, qui exige des labels de cohorte frais.
+  réentraînement supervisé, qui exige des labels de cohorte récents.
 - `decrochage model-register --run-id <run-id>`, `model-promote --approve` et `model-rollback`
   mettent en œuvre le cycle de vie des alias MLflow, avec une barrière de
   promotion humaine.
