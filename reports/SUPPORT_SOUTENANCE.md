@@ -271,10 +271,18 @@ pipeline si une colonne interdite s'y glisse. »
 « Trois variables demandent une vigilance particulière : le sexe, le statut boursier,
 l'établissement d'origine.
 
-Premier risque : le biais. Et attention — retirer la variable « sexe » ne suffit pas.
-D'autres variables corrélées peuvent réintroduire une discrimination par la bande.
-Faire l'aveugle ne rend pas équitable. Je le vérifie par un audit, je vous le montre
-dans quelques minutes.
+Premier risque : le biais. Et attention — retirer la variable « sexe » du modèle ne
+suffit pas à le rendre équitable.
+
+Pourquoi ? Parce que d'autres variables peuvent en tenir lieu sans le dire. Si
+certaines filières sont très majoritairement féminines, alors la filière porte déjà
+l'information du sexe. Le modèle peut donc traiter différemment des groupes sans
+jamais voir la variable qu'on a retirée. C'est ce qu'on appelle une variable proxy.
+
+Autrement dit : se rendre aveugle à un critère ne rend pas équitable, ça rend
+seulement incapable de le vérifier. Je préfère donc garder ces variables pour
+**auditer** le modèle — et je vous montre le résultat de cet audit dans quelques
+minutes.
 
 Deuxième risque : l'effet de marquage. Étiqueter un étudiant « à risque » n'est jamais
 neutre — ça peut devenir une prophétie auto-réalisatrice.
