@@ -98,6 +98,11 @@ laisser des silences. C'est le bon rythme pour un oral.
 Si une slide me paraît courte à l'écran, c'est normal : la slide affiche l'ossature,
 c'est **moi** qui porte le contenu. Le texte ci-dessous est ce que la slide ne dit pas.
 
+**Règle en cas de dépassement** : je ne coupe jamais une explication pour tenir la
+minute — je débite un peu plus vite et je rattrape sur les scènes marquées ⏩, qui
+sont volontairement en dessous de leur budget. Ce qu'on retient d'un oral, c'est une
+explication claire, pas un chronomètre respecté à la seconde.
+
 ---
 
 ### 🎬 Slide 1 · *page de titre* — **de 0:00 à 0:30** · 30 s à tenir
@@ -324,6 +329,10 @@ l'entraînement. »
 
 ### 🎬 Slide 9 · *6. EDA* — **de 9:00 à 10:00** · 1 min à tenir
 
+> ⏩ **Scène dense** — le texte fait ~1 min 15. Je débite un peu plus vite ici :
+> l'explication des leurres est un point fort, je ne la sacrifie pas. Je rattrape
+> sur les slides 10, 13 et 16, qui sont plus courtes que leur minute.
+
 **Je dis :**
 
 « Voici les distributions des principaux signaux, séparées par classe : en clair les
@@ -333,18 +342,24 @@ On voit nettement que les étudiants qui décrochent sont moins présents en cou
 connectent moins à la plateforme pédagogique, rendent davantage de devoirs en retard,
 et déclarent une motivation plus basse.
 
-Deux choses à noter. D'abord, les distributions se chevauchent : aucun de ces signaux
-ne suffit à lui seul, c'est bien leur combinaison qui porte l'information. Ensuite, ce
-sont tous des signaux d'engagement, disponibles à mi-semestre — et surtout, ce sont
-des facteurs sur lesquels une équipe pédagogique peut réellement agir. Relancer un
-étudiant absent, c'est possible ; changer son établissement d'origine, non.
+Deux remarques. Les courbes se chevauchent : aucun de ces signaux ne suffit à lui
+seul, c'est leur combinaison qui porte l'information. Et ce sont des facteurs sur
+lesquels une équipe pédagogique peut agir — relancer un étudiant absent, c'est
+possible ; changer son lycée d'origine, non.
 
-Et voici la contre-épreuve : le taux d'abandon par modalité pour les trois leurres.
-C'est plat, la ligne rouge est la moyenne générale. L'écart-type est de l'ordre de
-deux points, c'est-à-dire du bruit.
+Passons maintenant à la vérification des trois leurres, que je vous avais annoncée.
 
-Si l'un d'eux s'était révélé corrélé, ce serait soit une erreur de l'énoncé, soit une
-fuite déguisée. Dans les deux cas, il valait mieux le savoir. »
+Pour chacun, j'ai calculé le taux d'abandon groupe par groupe : une barre par groupe
+de TD, une barre par couleur de carte, une barre par jour d'inscription.
+
+Si l'une de ces variables avait le moindre pouvoir prédictif, on verrait des barres
+nettement plus hautes que les autres. Or elles sont toutes à la même hauteur, autour
+de la ligne rouge — qui marque le taux d'abandon moyen, 28 %.
+
+L'écart entre les groupes est d'environ deux points. C'est l'ordre de grandeur de ce
+qu'on obtiendrait en formant les groupes au hasard : autrement dit, il n'y a rien à
+lire là-dedans. Je peux donc les exclure — non pas parce que l'énoncé le dit, mais
+parce que je l'ai vérifié. »
 
 **➜** « Passons au modèle. »
 
