@@ -38,6 +38,10 @@ reports/drift_report.json
 docs/qa_docker_demo_prompt.md
 reports/screenshots/docker/qa-docker-demo.webm
 
+# Énoncé du cas d'usage : propriété de l'organisme de certification,
+# conservé en local mais non redistribué sur le dépôt public
+reports/Enonce_cas_usage.pdf
+
 # OS / IDE
 .DS_Store
 ~$*.pptx

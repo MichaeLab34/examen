@@ -101,6 +101,13 @@ restreint, audité et purgé. Voir
 `docs/evidence_portfolio.md` pour la matrice de couverture et les preuves de
 certification.
 
+## Licence
+
+Le code source, les tests et la documentation sont sous licence MIT (voir
+[LICENSE](LICENSE)). Les jeux de données de `data/raw/` sont fournis par
+l'organisme de certification et ne sont pas redistribuables ; l'énoncé du cas
+d'usage n'est volontairement pas versionné.
+
 ## Données
 
 Jeu principal `decrochage_etudiants_complet_V5.csv` (~5 200 lignes, 33 colonnes),
