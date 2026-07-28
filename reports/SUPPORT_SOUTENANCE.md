@@ -502,8 +502,7 @@ valeurs en une commande. »
 
 **Je dis :**
 
-« Les résultats sur le jeu de test — celui que le modèle n'a jamais vu, et qui n'a
-servi à choisir ni les hyperparamètres, ni le seuil.
+« Voici les résultats sur le jeu de test, mis de côté depuis le début.
 
 L'AUC est de 0,949. Au seuil retenu, je détecte 95,9 % des futurs décrocheurs. Sur
 cette cohorte de test, douze m'échappent — et c'est la matrice de confusion que vous
