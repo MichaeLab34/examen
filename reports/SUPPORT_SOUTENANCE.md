@@ -609,8 +609,8 @@ traitement, de corriger une erreur d'ingestion, ou de répondre à une réclamat
 
 Dès la couche Silver, les identifiants directs sont remplacés par un pseudonyme
 calculé par HMAC. Gold porte les variables, les scores et les rapports de dérive —
-sans aucun identifiant en clair. Autrement dit, tout ce qui sert à modéliser et à
-scorer travaille déjà sur des données pseudonymisées.
+sans aucun identifiant en clair. Autrement dit, l'entraînement comme le scoring se
+font sur des données déjà pseudonymisées.
 
 Chaque lot porte une date d'expiration, et une commande de purge supprime les lots
 échus. Toutes les opérations sont journalisées dans une table d'audit, ce qui me
