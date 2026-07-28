@@ -2,11 +2,20 @@
 
 ## Décision en une phrase
 
-Pour environ 5 200 étudiants par cohorte et un scoring surtout batch à mi-S1,
-la cible proportionnée est un **VPS européen conteneurisé**, protégé par Caddy,
-avec Postgres, Prometheus/Grafana et un registre MLflow local. Kubernetes serait
-un surdimensionnement ; le serverless sera réévalué si l'usage devient très
-irrégulier ou si l'université dispose déjà d'une plateforme managée.
+Pour environ 5 200 étudiants par cohorte et un scoring surtout batch à mi-S1, la
+cible proportionnée est une **machine unique conteneurisée**, protégée par Caddy,
+avec Postgres, Prometheus/Grafana et un registre MLflow local.
+
+**Option privilégiée : le serveur qui héberge déjà le LMS.** Les données
+d'engagement en proviennent ; les traiter sur place évite tout transfert hors du
+système d'information de l'université et tout sous-traitant supplémentaire au sens
+du RGPD, sans coût d'hébergement additionnel. Condition : cloisonnement en
+conteneur avec ressources plafonnées, pour qu'un entraînement ne dégrade jamais le
+LMS en période de partiels.
+
+**Option de repli : un VPS européen conteneurisé**, si la DSI préfère isoler le
+service. Kubernetes serait un surdimensionnement ; le serverless sera réévalué si
+l'usage devient très irrégulier.
 
 ## Architecture cible
 
@@ -21,7 +30,7 @@ Drift/performance/labels -> candidat -> gate rappel/AUC/equite -> validation hum
                                                        |-> promotion ou rollback
 ```
 
-Le VPS garde le traitement et les données sous le contrôle de la DSI. Les
+Dans les deux cas, le traitement et les données restent sous le contrôle de la DSI. Les
 conteneurs préservent la portabilité : changer d'hébergeur ne demande pas de
 réécrire le service. Caddy fournit le reverse-proxy et renouvelle automatiquement
 les certificats HTTPS avec un vrai nom de domaine.
@@ -33,7 +42,8 @@ pas des devis fournisseurs.
 
 | Option | Ordre de grandeur mensuel | Décision |
 |---|---:|---|
-| VPS production + sauvegarde + domaine | 10-20 EUR | Retenu pour le pilote |
+| Serveur LMS existant (conteneur cloisonné) | 0 EUR | **Privilégié** : données dans le SI |
+| VPS production + sauvegarde + domaine | 10-20 EUR | Repli si isolation souhaitée |
 | Petit environnement de test séparé | +5-10 EUR | Recommandé avant production |
 | Serverless + base managée | 20-80 EUR | À revoir si trafic très intermittent |
 | Kubernetes managé | 60-150 EUR avant services utiles | Écarté à cette échelle |
