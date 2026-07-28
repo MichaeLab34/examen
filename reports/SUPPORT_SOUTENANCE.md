@@ -70,6 +70,27 @@ Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramèn
 
 ---
 
+## 🔤 Antisèche des sigles
+
+Si un membre du jury me demande ce que veut dire un sigle, ou si j'ai un blanc.
+
+| Sigle | Développé | En français |
+|---|---|---|
+| **TCO** | *Total Cost of Ownership* | coût total de possession — tout ce que la solution coûte sur un an |
+| **AUC** | *Area Under the Curve* (courbe ROC) | aire sous la courbe : capacité du modèle à bien classer, entre 0,5 et 1 |
+| **ROC** | *Receiver Operating Characteristic* | courbe vrais positifs / faux positifs, à tous les seuils |
+| **LMS** | *Learning Management System* | la plateforme pédagogique en ligne (type Moodle) |
+| **PSI** | *Population Stability Index* | indice de dérive : mesure l'écart entre la population d'hier et celle d'aujourd'hui |
+| **SHAP** | *SHapley Additive exPlanations* | contribution de chaque variable à une prédiction |
+| **FN / FP** | faux négatif / faux positif | décrocheur raté / fausse alerte |
+| **MAE** | *Mean Absolute Error* | erreur absolue moyenne (ici 2,3 points sur 20) |
+| **R²** | coefficient de détermination | part de la variance expliquée (ici 0,68) |
+| **HMAC** | *Hash-based Message Authentication Code* | pseudonymisation avec une clé secrète |
+| **DPO** | *Data Protection Officer* | délégué à la protection des données |
+| **CI** | *Continuous Integration* | intégration continue : tests joués à chaque modification |
+
+---
+
 ## ⚠️ Ce que je ne dis pas
 
 - ❌ « Mon modèle détecte les décrocheurs » → ✅ « il **estime une probabilité** qui
@@ -732,8 +753,8 @@ stack conteneurisée. »
 
 **Je dis :**
 
-« TCO, ça veut dire *coût total de possession* : tout ce que la solution coûte sur un
-an, pas seulement le serveur. L'hébergement, les sauvegardes, le temps que la DSI y
+« TCO, pour *Total Cost of Ownership* — le coût total de possession : tout ce que la
+solution coûte sur un an, pas seulement le serveur. L'hébergement, les sauvegardes, le temps que la DSI y
 passe, celui du délégué à la protection des données, la revue annuelle du modèle.
 Ça, c'est chiffrable — et c'est modeste.
 
