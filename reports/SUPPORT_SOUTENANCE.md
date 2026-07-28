@@ -1,18 +1,17 @@
 # 🎤 Conducteur de soutenance
 
 **Détection précoce du décrochage étudiant en L1** — Staudt Michael
-30 min de présentation + 30 min de questions · 35 slides · budget 28 min 45
+30 min de présentation + 30 min de questions · 33 slides · budget 28 min 45
 
 > Ce document est **mon** outil, pas un livrable. Il sert à dérouler
 > `SUPPORT_SOUTENANCE.pptx` sans me perdre : où j'en suis dans le temps, quoi dire,
-> quels chiffres citer, quoi ne pas dire. Les slides sont générées depuis
-> [`soutenance_slides.md`](soutenance_slides.md).
+> quels chiffres citer, quoi ne pas dire.
 
 ---
 
 ## ⏱️ Contrôle du temps — mes 4 repères
 
-Je ne surveille pas 35 slides, je surveille **4 points de passage**. Si j'y suis, tout va bien.
+Je ne surveille pas 33 slides, je surveille **4 points de passage**. Si j'y suis, tout va bien.
 
 | À la minute… | je dois être sur… | sinon |
 |---|---|---|
@@ -237,7 +236,8 @@ Donner le lien du dépôt. Enchaîner sur les questions avec assurance.
 
 ## 💬 Questions du jury — réponses prêtes
 
-Les slides 34 et 35 sont mes filets. Y aller sans hésiter plutôt que de paraphraser.
+Le livrable ne contient **pas** de slides de backup : ce tableau est mon seul filet.
+L'avoir sous les yeux pendant les 30 min de questions.
 
 | Question | Ma réponse en une phrase |
 |---|---|
@@ -272,18 +272,35 @@ prendrais : … » — bien meilleur qu'une improvisation.
 
 ---
 
-## 🔧 Régénérer les slides
+## 🔧 Les fichiers et leurs rôles
 
-Le PPTX est produit depuis [`soutenance_slides.md`](soutenance_slides.md) (format
-[Marp](https://marp.app)) :
+| Fichier | Rôle |
+|---|---|
+| `SUPPORT_SOUTENANCE.pptx` | **🏆 LE LIVRABLE remis au jury** — mis en forme hors Marp |
+| `soutenance_slides.md` | source Marp : le **contenu** de référence (texte, chiffres, notes) |
+| `SUPPORT_SOUTENANCE.md` | ce conducteur |
 
-```powershell
-cd reports
-npx @marp-team/marp-cli soutenance_slides.md --pptx --allow-local-files -o SUPPORT_SOUTENANCE.pptx
-```
+> ### ⛔ Ne jamais écraser le livrable
+>
+> `SUPPORT_SOUTENANCE.pptx` n'est **pas** la sortie de Marp : c'est la version
+> retravaillée, celle qui part au jury. Une régénération Marp qui écrirait sous ce
+> nom **détruirait la mise en forme**. Toujours produire sous un autre nom :
+>
+> ```powershell
+> cd reports
+> npx @marp-team/marp-cli soutenance_slides.md --pptx --allow-local-files -o soutenance_slides.pptx
+> ```
+>
+> Puis remettre en forme, et remplacer le livrable **volontairement**.
+> Fermer PowerPoint avant toute écriture, sinon le fichier est verrouillé.
 
-Alternative : extension « Marp for VS Code » → clic droit → *Export slide deck*.
-Fermer PowerPoint avant, sinon l'écriture échoue sur un fichier verrouillé.
+**Circuit quand un chiffre ou un texte change** : modifier `soutenance_slides.md` →
+régénérer sous `soutenance_slides.pptx` → repasser par l'outil de mise en forme →
+remplacer `SUPPORT_SOUTENANCE.pptx` → mettre à jour l'antisèche de ce conducteur.
+
+**État actuel du livrable** : 33 slides (les 2 slides de backup de la source n'y sont
+pas — voir la section Questions ci-dessus, qui les remplace), notes orateur présentes
+sauf sur 4 slides de captures qui n'en ont pas besoin.
 
 **À savoir sur la source :**
 
