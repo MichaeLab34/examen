@@ -87,12 +87,20 @@ Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramèn
 
 **Comment lire.** `« … »` = ce que je dis, tel quel. *(en italique)* = indication de
 jeu, je ne le prononce pas. **➜** = ma phrase d'enchaînement vers la slide suivante.
-Le texte est calibré sur la durée indiquée (~150 mots par minute) : si je l'ai dit,
-je suis dans les temps.
+**de X à Y** = la plage horaire où je dois être sur cette slide ; « n min à tenir » =
+le temps que je dois y passer.
+
+**Le texte entier fait ~3 840 mots.** Débité vite (150 mots/min) : 25 min — il me
+reste de la marge. Débité **posément** (130 mots/min, silences compris) : **29 min**,
+soit exactement le temps imparti. Donc : je peux parler lentement, articuler, et
+laisser des silences. C'est le bon rythme pour un oral.
+
+Si une slide me paraît courte à l'écran, c'est normal : la slide affiche l'ossature,
+c'est **moi** qui porte le contenu. Le texte ci-dessous est ce que la slide ne dit pas.
 
 ---
 
-### 🎬 Slide 1 · *page de titre* — 0:30 → 0:30
+### 🎬 Slide 1 · *page de titre* — **de 0:00 à 0:30** · 30 s à tenir
 
 **Je dis :**
 
@@ -110,7 +118,7 @@ questions pour la fin. »
 
 ---
 
-### 🎬 Slide 2 · *Fil conducteur* — 0:30 → 1:00
+### 🎬 Slide 2 · *Fil conducteur* — **de 0:30 à 1:00** · 30 s à tenir
 
 **Je dis :**
 
@@ -129,7 +137,7 @@ le jury sait lire.)*
 
 ---
 
-### 🎬 Slide 3 · *Ma démarche* — 1:00 → 2:00
+### 🎬 Slide 3 · *Ma démarche* — **de 1:00 à 2:00** · 1 min à tenir
 
 **Je dis :**
 
@@ -153,55 +161,68 @@ défendre. »
 
 ---
 
-### 🎬 Slide 4 · *1. Contexte & problème métier* — 1:00 → 3:00
+### 🎬 Slide 4 · *1. Contexte & problème métier* — **de 2:00 à 3:00** · 1 min à tenir
 
 **Je dis :**
 
 « Une université pluridisciplinaire constate un taux d'abandon élevé en première
-année : ici, environ 28 % des étudiants.
+année : ici, environ 28 % des étudiants. Plus d'un sur quatre.
 
-La direction de la réussite étudiante veut agir tôt. Aujourd'hui, le repérage se fait
-après les partiels — quand le décrochage est déjà engagé. Et les moyens sont
-limités : un nombre fini de tuteurs, de créneaux de soutien, d'aides sociales.
+Ce n'est pas qu'un indicateur. Pour l'étudiant, c'est une année perdue et souvent un
+sentiment d'échec durable. Pour l'établissement, c'est un budget engagé sans résultat.
 
-La question métier est donc : quels étudiants accompagner en priorité, dès le milieu
-du premier semestre ?
+La direction de la réussite étudiante veut donc agir plus tôt. Aujourd'hui, le
+repérage se fait après les partiels — c'est-à-dire quand le décrochage est déjà
+engagé, et qu'il devient très difficile de faire revenir quelqu'un.
+
+Et les moyens sont limités : un nombre fini de tuteurs, de créneaux de soutien,
+d'aides sociales. Il faut donc choisir qui accompagner en premier.
+
+D'où la question métier : quels étudiants accompagner en priorité, dès le milieu du
+premier semestre ?
 
 Et la question d'IA qui en découle : estimer une probabilité de décrochage,
 explicable, à partir des seules données disponibles à ce moment-là.
 
-J'insiste sur « à ce moment-là » : cette contrainte de temps conditionne tout le
-projet. J'y reviens dans deux slides. »
+Pourquoi le milieu du semestre ? Parce que c'est le premier moment où on dispose d'un
+signal d'engagement exploitable, et qu'il reste assez de temps pour agir.
+
+J'insiste sur cette contrainte de temps : elle conditionne tout le projet. J'y reviens
+dans deux slides. »
 
 ---
 
-### 🎬 Slide 5 · *2. Objectif IA & cadrage* — 1:00 → 4:00
+### 🎬 Slide 5 · *2. Objectif IA & cadrage* — **de 3:00 à 4:00** · 1 min à tenir
 
 **Je dis :**
 
 « Il y a deux cibles.
 
-La principale, c'est l'abandon : une variable binaire. C'est donc de la
-classification, et c'est sur elle que porte l'analyse ROC/AUC.
+La principale, c'est l'abandon : une variable binaire — l'étudiant interrompt sa
+formation, ou non. C'est donc de la classification, et c'est sur elle que porte
+l'analyse ROC/AUC.
 
 La secondaire, c'est la moyenne finale, traitée en régression.
 
 Pourquoi la classification comme cible principale, plutôt que de simplement prédire
 la note ? Parce que la décision métier est binaire : j'accompagne cet étudiant, ou je
-ne l'accompagne pas. La note prédite sert seulement à calibrer l'intensité de l'aide —
-soutien léger ou soutien renforcé.
+ne l'accompagne pas. Une note prédite ne dit pas où placer la frontière ; elle sert
+seulement à calibrer l'intensité de l'aide — soutien léger ou soutien renforcé.
 
-Et la sortie du modèle n'est pas un verdict : c'est un score de risque, avec une
-alerte au-delà d'un seuil. Le score propose, l'humain décide.
+Et la sortie du modèle n'est pas un verdict. C'est une probabilité entre zéro et un,
+accompagnée d'une alerte au-delà d'un seuil que je justifierai tout à l'heure. Le
+score propose, l'humain décide — j'y reviendrai, c'est un point que je tiens.
 
-J'ai aussi enrichi les données avec le catalogue des formations, qui apporte le taux
-de réussite historique de chaque filière. »
+Dernier élément de cadrage : j'ai enrichi les données avec le catalogue des
+formations, qui apporte notamment le taux de réussite historique de chaque filière.
+C'est une information connue avant la rentrée, donc disponible au moment du scoring,
+sans aucun risque de fuite. »
 
 **➜** « Venons-en aux données — et aux pièges qu'elles contiennent. »
 
 ---
 
-### 🎬 Slide 6 · *3. Les données et les 3 pièges* — 2:30 → 6:30
+### 🎬 Slide 6 · *3. Les données et les 3 pièges* — **de 4:00 à 6:30** · 2 min 30 à tenir
 
 > ⭐ **La slide la plus importante. Prendre le temps, ralentir le débit.**
 
@@ -241,7 +262,7 @@ pipeline si une colonne interdite s'y glisse. »
 
 ---
 
-### 🎬 Slide 7 · *4. Éthique, RGPD & biais* — 1:30 → 8:00
+### 🎬 Slide 7 · *4. Éthique, RGPD & biais* — **de 6:30 à 8:00** · 1 min 30 à tenir
 
 **Je dis :**
 
@@ -267,7 +288,7 @@ de pseudonymisation n'est pas dans le dépôt. »
 
 ---
 
-### 🎬 Slide 8 · *5. Préparation des données* — 1:00 → 9:00
+### 🎬 Slide 8 · *5. Préparation des données* — **de 8:00 à 9:00** · 1 min à tenir
 
 **Je dis :**
 
@@ -291,21 +312,26 @@ l'entraînement. »
 
 ---
 
-### 🎬 Slide 9 · *6. EDA* — 1:00 → 10:00
+### 🎬 Slide 9 · *6. EDA* — **de 9:00 à 10:00** · 1 min à tenir
 
 **Je dis :**
 
-« Voici les distributions des principaux signaux, séparées par classe.
+« Voici les distributions des principaux signaux, séparées par classe : en clair les
+étudiants qui poursuivent, en foncé ceux qui décrochent.
 
 On voit nettement que les étudiants qui décrochent sont moins présents en cours, se
 connectent moins à la plateforme pédagogique, rendent davantage de devoirs en retard,
 et déclarent une motivation plus basse.
 
-Ce sont des signaux d'engagement, disponibles à mi-semestre — et surtout, ce sont des
-facteurs sur lesquels une équipe pédagogique peut agir.
+Deux choses à noter. D'abord, les distributions se chevauchent : aucun de ces signaux
+ne suffit à lui seul, c'est bien leur combinaison qui porte l'information. Ensuite, ce
+sont tous des signaux d'engagement, disponibles à mi-semestre — et surtout, ce sont
+des facteurs sur lesquels une équipe pédagogique peut réellement agir. Relancer un
+étudiant absent, c'est possible ; changer son établissement d'origine, non.
 
 Et voici la contre-épreuve : le taux d'abandon par modalité pour les trois leurres.
-C'est plat. L'écart-type est de l'ordre de deux points, c'est-à-dire du bruit.
+C'est plat, la ligne rouge est la moyenne générale. L'écart-type est de l'ordre de
+deux points, c'est-à-dire du bruit.
 
 Si l'un d'eux s'était révélé corrélé, ce serait soit une erreur de l'énoncé, soit une
 fuite déguisée. Dans les deux cas, il valait mieux le savoir. »
@@ -314,7 +340,7 @@ fuite déguisée. Dans les deux cas, il valait mieux le savoir. »
 
 ---
 
-### 🎬 Slide 10 · *7. Choix du modèle* — 1:00 → 11:00
+### 🎬 Slide 10 · *7. Choix du modèle* — **de 10:00 à 11:00** · 1 min à tenir
 
 **Je dis :**
 
@@ -337,7 +363,7 @@ et non significatif. »
 
 ---
 
-### 🎬 Slide 11 · *7.1 Éco-conception : le coût* — 0:45 → 11:45
+### 🎬 Slide 11 · *7.1 Éco-conception : le coût* — **de 11:00 à 11:45** · 45 s à tenir
 
 **Je dis :**
 
@@ -358,7 +384,7 @@ modèles, lui, est stable. »
 
 ---
 
-### 🎬 Slide 12 · *7.2 Les 6 leviers* — 0:45 → 12:30
+### 🎬 Slide 12 · *7.2 Les 6 leviers* — **de 11:45 à 12:30** · 45 s à tenir
 
 **Je dis :**
 
@@ -378,7 +404,7 @@ et la purge — servent d'ailleurs autant le RGPD que la sobriété. »
 
 ---
 
-### 🎬 Slide 13 · *8. Entraînement & validation* — 1:00 → 13:30
+### 🎬 Slide 13 · *8. Entraînement & validation* — **de 12:30 à 13:30** · 1 min à tenir
 
 **Je dis :**
 
@@ -400,7 +426,7 @@ calibration des probabilités, dont j'ai besoin juste après pour choisir le seu
 
 ---
 
-### 🎬 Slide 14 · *9. Choix du seuil* — 1:30 → 15:00
+### 🎬 Slide 14 · *9. Choix du seuil* — **de 13:30 à 15:00** · 1 min 30 à tenir
 
 > ⭐ **La décision la plus défendable du projet. Ralentir.**
 
@@ -431,27 +457,30 @@ valeurs en une commande. »
 
 ---
 
-### 🎬 Slide 15 · *10. Résultats* — 1:00 → 16:00
+### 🎬 Slide 15 · *10. Résultats* — **de 15:00 à 16:00** · 1 min à tenir
 
 **Je dis :**
 
-« Les résultats sur le jeu de test, que le modèle n'a jamais vu.
+« Les résultats sur le jeu de test — celui que le modèle n'a jamais vu, et qui n'a
+servi à choisir ni les hyperparamètres, ni le seuil.
 
-L'AUC est de 0,949. Au seuil retenu, je détecte 95,9 % des futurs décrocheurs — sur
-cette cohorte de test, douze m'échappent.
+L'AUC est de 0,949. Au seuil retenu, je détecte 95,9 % des futurs décrocheurs. Sur
+cette cohorte de test, douze m'échappent — et c'est la matrice de confusion que vous
+voyez à l'écran.
 
 La précision est de 63,5 %. Je l'assume complètement : c'est la conséquence directe
-du choix précédent. Sur cent étudiants que je signale, environ trente-six vont bien.
-Ils recevront une proposition d'accompagnement dont ils n'avaient pas besoin — ce qui
-est très préférable à un décrocheur qu'on laisse passer.
+du choix que je viens d'expliquer. Sur cent étudiants que je signale, environ
+trente-six vont bien. Ils recevront une proposition d'accompagnement dont ils
+n'avaient pas besoin — ce qui est très préférable à un décrocheur qu'on laisse passer,
+et ce qui reste soutenable : ce sont des entretiens, pas des sanctions.
 
 Et si la direction estimait que le coût d'une fausse alerte est plus élevé que ce que
-j'ai supposé, on remonte le seuil et on inverse l'arbitrage. C'est un paramètre, pas
-une fatalité. »
+j'ai supposé — par exemple parce que les tuteurs saturent — on remonte le seuil et on
+inverse l'arbitrage. C'est un paramètre, pas une fatalité. »
 
 ---
 
-### 🎬 Slide 16 · *11. Explicabilité & équité* — 1:00 → 17:00
+### 🎬 Slide 16 · *11. Explicabilité & équité* — **de 16:00 à 17:00** · 1 min à tenir
 
 **Je dis :**
 
@@ -472,7 +501,7 @@ Le modèle ne traite donc pas un groupe moins bien qu'un autre, et je peux le pr
 
 ---
 
-### 🎬 Slide 17 · *12. Cible secondaire (régression)* — 0:30 → 17:30
+### 🎬 Slide 17 · *12. Cible secondaire (régression)* — **de 17:00 à 17:30** · 30 s à tenir
 
 **Je dis :**
 
@@ -489,7 +518,7 @@ classification. »
 
 ---
 
-### 🎬 Slide 18 · *13. Implémentation & service* — 1:00 → 18:30
+### 🎬 Slide 18 · *13. Implémentation & service* — **de 17:30 à 18:30** · 1 min à tenir
 
 **Je dis :**
 
@@ -511,28 +540,32 @@ et une image Docker qui ne tourne pas en root. »
 
 ---
 
-### 🎬 Slide 19 · *14. Persistance & médaillon* — 1:00 → 19:30
+### 🎬 Slide 19 · *14. Persistance & médaillon* — **de 18:30 à 19:30** · 1 min à tenir
 
 **Je dis :**
 
 « L'architecture de données suit un découpage en médaillon.
 
 Bronze contient les lignes sources telles quelles, avec les données personnelles. Je
-l'assume : c'est la zone de traçabilité et de reprise, celle qui permet de rejouer un
-traitement ou de répondre à une réclamation. En contrepartie, elle est d'accès
-restreint, auditée, et purgée à échéance.
+l'assume, et c'est une question qu'on peut me poser : pourquoi garder du brut ? Parce
+que c'est la zone de traçabilité et de reprise — celle qui permet de rejouer un
+traitement, de corriger une erreur d'ingestion, ou de répondre à une réclamation d'un
+étudiant. En contrepartie, elle est d'accès restreint, auditée, et purgée à échéance.
 
-Dès Silver, les identifiants directs sont remplacés par un pseudonyme. Gold porte les
-variables, les scores et les rapports de dérive — sans aucun identifiant en clair.
+Dès la couche Silver, les identifiants directs sont remplacés par un pseudonyme
+calculé par HMAC. Gold porte les variables, les scores et les rapports de dérive —
+sans aucun identifiant en clair. Autrement dit, tout ce qui sert à modéliser et à
+scorer travaille déjà sur des données pseudonymisées.
 
 Chaque lot porte une date d'expiration, et une commande de purge supprime les lots
-échus. Toutes les opérations sont journalisées dans une table d'audit.
+échus. Toutes les opérations sont journalisées dans une table d'audit, ce qui me
+permet de répondre à la question « qui a fait quoi, quand, sur quelles données ».
 
 La protection est donc dans la plomberie, pas dans une note d'intention. »
 
 ---
 
-### 🎬 Slide 20 · *15. Architecture proportionnée* — 1:00 → 20:30
+### 🎬 Slide 20 · *15. Architecture proportionnée* — **de 19:30 à 20:30** · 1 min à tenir
 
 **Je dis :**
 
@@ -555,7 +588,7 @@ réécrire. »
 
 ---
 
-### 🎬 Slide 21 · *16. Cycle de vie* — 1:00 → 21:30
+### 🎬 Slide 21 · *16. Cycle de vie* — **de 20:30 à 21:30** · 1 min à tenir
 
 **Je dis :**
 
@@ -579,7 +612,7 @@ retour arrière en une commande. »
 
 ---
 
-### 🎬 Slide 22 · *17. Supervision et alertes* — 0:45 → 22:15
+### 🎬 Slide 22 · *17. Supervision et alertes* — **de 21:30 à 22:15** · 45 s à tenir
 
 **Je dis :**
 
@@ -599,7 +632,7 @@ c'est l'absence de ce signal qui déclenche l'alerte. »
 
 ---
 
-### 🎬 Slides 23 à 29 · *17.1 à 17.7 — les captures* — 2:00 → 24:15
+### 🎬 Slides 23 à 29 · *17.1 à 17.7 — les captures* — **de 22:15 à 24:15** · 2 min à tenir
 
 *(Faire défiler d'un trait, une phrase par capture, sans s'arrêter. Deux minutes pour
 sept slides, soit ~15 s chacune en comptant le temps de les afficher : le texte
@@ -632,7 +665,7 @@ stack conteneurisée. »
 
 ---
 
-### 🎬 Slide 30 · *18. TCO & valeur du pilote* — 1:00 → 25:15
+### 🎬 Slide 30 · *18. TCO & valeur du pilote* — **de 24:15 à 25:15** · 1 min à tenir
 
 **Je dis :**
 
@@ -654,7 +687,7 @@ causal de l'accompagnement — et cet effet, seule une expérimentation peut le 
 
 ---
 
-### 🎬 Slide 31 · *19. Les arbitrages* — 1:30 → 26:45
+### 🎬 Slide 31 · *19. Les arbitrages* — **de 25:15 à 26:45** · 1 min 30 à tenir
 
 > ⭐ **La slide qui répond à « le raisonnement compte autant que le résultat ».**
 
@@ -689,7 +722,7 @@ parler pour le reste.)*
 
 ---
 
-### 🎬 Slide 32 · *20. Limites & recommandations* — 1:00 → 27:45
+### 🎬 Slide 32 · *20. Limites & recommandations* — **de 26:45 à 27:45** · 1 min à tenir
 
 **Je dis :**
 
@@ -712,7 +745,7 @@ Et le principe qui ne change pas : le score priorise, il ne décide pas. »
 
 ---
 
-### 🎬 Slide 33 · *21. Conclusion* — 1:00 → 28:45
+### 🎬 Slide 33 · *21. Conclusion* — **de 27:45 à 28:45** · 1 min à tenir
 
 **Je dis :**
 
