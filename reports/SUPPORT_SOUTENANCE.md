@@ -511,8 +511,9 @@ voyez à l'écran.
 La précision est de 63,5 %. Je l'assume complètement : c'est la conséquence directe
 du choix que je viens d'expliquer. Sur cent étudiants que je signale, environ
 trente-six vont bien. Ils recevront une proposition d'accompagnement dont ils
-n'avaient pas besoin — ce qui est très préférable à un décrocheur qu'on laisse passer,
-et ce qui reste soutenable : ce sont des entretiens, pas des sanctions.
+n'avaient pas besoin — c'est très préférable à un décrocheur qu'on laisse passer. Et
+pour eux, la conséquence est légère : on leur propose un entretien, on ne les
+sanctionne pas.
 
 Et si la direction estimait que le coût d'une fausse alerte est plus élevé que ce que
 j'ai supposé — par exemple parce que les tuteurs saturent — on remonte le seuil et on
