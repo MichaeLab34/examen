@@ -1,52 +1,59 @@
-# Monitoring Plan
+# Plan de surveillance
 
-## Signals
+## Signaux surveillés
 
-| Signal | Metric | Alert |
+| Signal | Métrique | Seuil d'alerte |
 |---|---|---|
-| Data drift | PSI on numeric features | `watch >= 0.10`, `alert >= 0.25` |
-| Model performance | AUC / recall when labels arrive | AUC `< 0.85` or recall drop `> 10 pts` |
-| Fairness | Recall and alert-rate gaps by subgroup | gap `> 10 pts` |
-| Data quality | Missing-rate per key feature | `> 20%` |
-| Operations | API readiness and error rate | `/ready` unavailable or 5xx > 1% for 5 min |
-| Scheduled jobs | External heartbeat | expected ping absent |
+| Dérive des données | PSI sur les variables numériques | `watch >= 0.10`, `alert >= 0.25` |
+| Performance du modèle | AUC / rappel quand les labels arrivent | AUC `< 0.85` ou baisse de rappel `> 10 pts` |
+| Équité | Écarts de rappel et de taux d'alerte par sous-groupe | écart `> 10 pts` |
+| Qualité des données | Taux de valeurs manquantes par variable clé | `> 20 %` |
+| Exploitation | Disponibilité de l'API et taux d'erreur | `/ready` indisponible ou 5xx > 1 % pendant 5 min |
+| Tâches planifiées | Battement de cœur externe | ping attendu absent |
 
 ## Cadence
 
-- APScheduler runs the drift control every Monday at 06:00 Europe/Paris by
-  default; it can also be executed with `decrochage schedule --run-once monitoring`.
-- During the mid-S1 scoring window, data-quality and drift checks also run on
-  every imported batch.
-- Monthly, the team reviews alert rate, subgroup metrics, unresolved incidents
-  and support-team feedback.
-- APScheduler evaluates the retraining policy every Monday at 07:00. Drift,
-  performance or the annual review can trigger a candidate, but only when fresh
-  labels are available; production comparison and human approval follow.
+- Par défaut, APScheduler lance le contrôle de dérive chaque lundi à 06:00
+  (Europe/Paris) ; il peut aussi être exécuté par
+  `decrochage schedule --run-once monitoring`.
+- Pendant la fenêtre de scoring de mi-S1, les contrôles de qualité des données et
+  de dérive tournent en plus sur chaque lot importé.
+- Chaque mois, l'équipe passe en revue le taux d'alerte, les métriques par
+  sous-groupe, les incidents non résolus et les retours des équipes
+  d'accompagnement.
+- APScheduler évalue la politique de réentraînement chaque lundi à 07:00. La
+  dérive, la performance ou la revue annuelle peuvent déclencher un candidat,
+  mais uniquement si des labels frais sont disponibles ; la comparaison avec la
+  production et l'approbation humaine suivent.
 
 ## Actions
 
-1. Investigate data collection changes when PSI enters `watch`.
-2. Freeze automated re-use and trigger model review when PSI enters `alert`;
-   without fresh labels, investigate the collection rather than retraining blindly.
-3. Recalibrate threshold if the intervention capacity or FN/FP cost ratio
-   changes.
-4. Promote only after non-regression of recall, AUC >= 0.85, subgroup recall
-   gap <= 10 points and explicit human approval.
-5. Roll back the MLflow `production` alias when a validated model regresses in Run.
+1. Enquêter sur un changement de collecte des données quand le PSI passe en `watch`.
+2. Geler la réutilisation automatique et déclencher une revue du modèle quand le
+   PSI passe en `alert` ; sans labels frais, enquêter sur la collecte plutôt que
+   de réentraîner à l'aveugle.
+3. Recalibrer le seuil si la capacité d'intervention ou le rapport de coût FN/FP
+   change.
+4. Ne promouvoir qu'après non-régression du rappel, AUC >= 0,85, écart de rappel
+   entre sous-groupes <= 10 points et approbation humaine explicite.
+5. Revenir en arrière sur l'alias MLflow `production` quand un modèle validé
+   régresse en exploitation.
 
-## Alert Routing
+## Acheminement des alertes
 
-Grafana routes operational warnings to the university team channel and waits
-five continuous minutes before firing. The DSI on-call path is reserved for the
-mid-S1 scoring window because this is a replayable batch service, not a 24/7
-life-critical API. `DECROCHAGE_HEALTHCHECK_URL` covers silence from scoring,
-drift and purge jobs.
+Grafana route les avertissements d'exploitation vers le canal de l'équipe
+universitaire et attend cinq minutes continues avant de déclencher. Le circuit
+d'astreinte DSI est réservé à la fenêtre de scoring de mi-S1, parce qu'il s'agit
+d'un service batch rejouable, pas d'une API critique 24/7.
+`DECROCHAGE_HEALTHCHECK_URL` couvre le silence des tâches de scoring, de dérive
+et de purge.
 
-## Persistence
+## Persistance
 
-Drift reports are written as JSON artifacts and can also be stored in the
-`gold_drift_report` SQL table. Scheduler state is written atomically under
-`artifacts/scheduler/state.json`, which prevents duplicate execution after a
-same-day restart. This keeps the monitoring decision attached to an
-ingestion `batch_id`, with `status`, `watch_count`, `alert_count` and the full
-report payload available for dashboards or later audits.
+Les rapports de dérive sont écrits en artefacts JSON et peuvent aussi être
+stockés dans la table SQL `gold_drift_report`. L'état du planificateur est écrit
+de façon atomique sous `artifacts/scheduler/state.json`, ce qui évite une double
+exécution après un redémarrage le même jour. La décision de surveillance reste
+ainsi rattachée à un `batch_id` d'ingestion, avec `status`, `watch_count`,
+`alert_count` et le contenu complet du rapport disponibles pour les tableaux de
+bord ou un audit ultérieur.

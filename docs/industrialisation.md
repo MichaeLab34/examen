@@ -1,132 +1,145 @@
 # Industrialisation
 
-This project now separates the certification notebook from the operational path.
-The notebook explains the C1-C9 reasoning; the package under `src/decrochage/`
-contains reusable code for training, prediction, API serving, CLI operations and
-monitoring.
+Le projet sépare le notebook certifiant du chemin opérationnel. Le notebook
+explique le raisonnement C1-C9 ; le package sous `src/decrochage/` contient le
+code réutilisable pour l'entraînement, la prédiction, l'exposition en API, les
+opérations en ligne de commande et la surveillance.
 
-## Operational Entry Points
+## Points d'entrée opérationnels
 
 - `decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv`
-  validates cleaning, catalogue join coverage and leakage guards.
-- `decrochage init-db` creates the SQL tables used for Bronze/Silver/Gold
-  persistence. By default the database is `artifacts/decrochage.db`, while the
-  production-like Docker stack uses Postgres.
+  valide le nettoyage, la couverture de la jointure catalogue et les garde-fous
+  anti-fuite.
+- `decrochage init-db` crée les tables SQL utilisées par la persistance
+  Bronze/Silver/Gold. Par défaut la base est `artifacts/decrochage.db`, tandis
+  que la stack Docker proche de la production utilise Postgres.
 - `decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv`
-  persists raw rows in Bronze, cleaned/pseudonymized rows in Silver, and
-  ML-ready feature rows in Gold.
-- `decrochage purge-expired` deletes batches past their RGPD retention window.
-- `decrochage train ... --output artifacts/models/model_bundle.joblib` trains a
-  bundle with train/validation/test separation and records parameters, metrics
-  and artifacts in MLflow Tracking.
+  persiste les lignes brutes en Bronze, les lignes nettoyées et pseudonymisées en
+  Silver, et les lignes de variables prêtes pour le ML en Gold.
+- `decrochage purge-expired` supprime les lots ayant dépassé leur fenêtre de
+  rétention RGPD.
+- `decrochage train ... --output artifacts/models/model_bundle.joblib` entraîne un
+  bundle avec séparation train/validation/test et enregistre paramètres,
+  métriques et artefacts dans MLflow Tracking.
 - `decrochage predict artifacts/models/model_bundle.joblib input.csv --output reports/predictions.csv`
-  scores raw SI/LMS records. Add `--persist-db --batch-id <id>` to store the
-  predictions in the Gold table.
+  score des dossiers SI/LMS bruts. Ajouter `--persist-db --batch-id <id>` pour
+  stocker les prédictions dans la table Gold.
 - `decrochage drift-report reference.csv current.csv --output reports/drift_report.json`
-  generates a PSI drift report. Add `--persist-db --batch-id <id>` to store the
-  monitoring result in the Gold table.
-- `decrochage serve` starts the FastAPI service.
-- `decrochage retraining-decision ...` separates drift investigation from a
-  supervised retraining that requires fresh cohort labels.
-- `decrochage model-register --run-id <run-id>`, `model-promote --approve` and `model-rollback`
-  implement the MLflow alias lifecycle with a human promotion gate.
-- `decrochage alert-decision` applies cooldown/hysteresis and `heartbeat`
-  signals that a scheduled batch actually completed.
-- `decrochage schedule` starts the APScheduler daemon. Use `--run-once
-  monitoring` or `--run-once retraining` for an auditable manual execution.
+  produit un rapport de dérive PSI. Ajouter `--persist-db --batch-id <id>` pour
+  stocker le résultat de surveillance dans la table Gold.
+- `decrochage serve` démarre le service FastAPI.
+- `decrochage retraining-decision ...` sépare l'enquête sur la dérive d'un
+  réentraînement supervisé, qui exige des labels de cohorte frais.
+- `decrochage model-register --run-id <run-id>`, `model-promote --approve` et `model-rollback`
+  mettent en œuvre le cycle de vie des alias MLflow, avec une barrière de
+  promotion humaine.
+- `decrochage alert-decision` applique la temporisation et l'hystérésis ;
+  `heartbeat` signale qu'un batch planifié s'est effectivement terminé.
+- `decrochage schedule` démarre le démon APScheduler. Utiliser `--run-once
+  monitoring` ou `--run-once retraining` pour une exécution manuelle auditable.
 
-## Database & Medallion Architecture
+## Base de données et architecture médaillon
 
-The persistence layer is implemented in `src/decrochage/persistence.py` with
-SQLAlchemy. `DECROCHAGE_DATABASE_URL` can point to another SQL backend; when it
-is not set, SQLite is used locally. For a production-like local stack, use
-Postgres through Docker Compose:
+La couche de persistance est implémentée dans `src/decrochage/persistence.py`
+avec SQLAlchemy. `DECROCHAGE_DATABASE_URL` peut pointer vers un autre moteur SQL ;
+quand elle n'est pas définie, SQLite est utilisé en local. Pour une stack locale
+proche de la production, utiliser Postgres via Docker Compose :
 
 ```bash
 cp .env.example .env
-# edit POSTGRES_PASSWORD and DECROCHAGE_PSEUDONYMIZATION_SECRET
+# renseigner POSTGRES_PASSWORD et DECROCHAGE_PSEUDONYMIZATION_SECRET
 docker compose up -d postgres
 uv run decrochage init-db
 uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 ```
 
-The local database contains student records and is intentionally ignored by Git.
-The pseudonymization secret must stay outside version control.
+La base locale contient des dossiers étudiants et est volontairement ignorée par
+Git. Le secret de pseudonymisation doit rester hors du gestionnaire de versions.
 
-## MLflow Tracking and Registry
+## Suivi et registre MLflow
 
-Docker Compose exposes MLflow on `http://localhost:5000`. Its metadata uses an
-isolated SQLite backend under `artifacts/mlflow-server/`; the application database
-remains dedicated to business data. The server stores run parameters, metrics,
-the JSON training report and the serialized model bundle. Registration requires
-the originating `run_id`, so every model version remains linked to its experiment.
+Docker Compose expose MLflow sur `http://localhost:5000`. Ses métadonnées
+utilisent un backend SQLite isolé sous `artifacts/mlflow-server/` ; la base
+applicative reste dédiée aux données métier. Le serveur stocke les paramètres et
+métriques des runs, le rapport d'entraînement JSON et le bundle de modèle
+sérialisé. L'enregistrement exige le `run_id` d'origine, si bien que chaque
+version de modèle reste rattachée à son expérience.
 
-The API and scheduler use `http://mlflow:5000` inside Docker. Once a first version
-has been promoted, set `DECROCHAGE_REGISTERED_MODEL=decrochage-l1`; `/ready` then
-reports the active alias and version loaded from the registry.
+L'API et le planificateur utilisent `http://mlflow:5000` à l'intérieur de Docker.
+Une fois une première version promue, définir
+`DECROCHAGE_REGISTERED_MODEL=decrochage-l1` ; `/ready` rapporte alors l'alias
+actif et la version chargée depuis le registre.
 
-- Bronze tables keep one raw payload per source row with `batch_id`, `parse_ok`
-  and `rejected_reason` fields for traceability. This layer can contain direct
-  identifiers and must therefore be restricted, audited and purged.
-- Silver tables store deterministic cleaned/normalized records and catalogue
-  references. Direct identifiers are replaced by deterministic
-  HMAC-SHA-256 pseudonyms.
-- Gold tables store training features without leakage columns, deterministic
-  `train`/`validation`/`test` split labels, predictions and drift reports.
-- `privacy_audit_log` stores accountability events without direct student data.
+- Les tables Bronze conservent un payload brut par ligne source, avec les champs
+  `batch_id`, `parse_ok` et `rejected_reason` pour la traçabilité. Cette couche
+  peut contenir des identifiants directs : elle doit donc être restreinte,
+  auditée et purgée.
+- Les tables Silver stockent les enregistrements nettoyés et normalisés de façon
+  déterministe, ainsi que les références catalogue. Les identifiants directs y
+  sont remplacés par des pseudonymes HMAC-SHA-256 déterministes.
+- Les tables Gold stockent les variables d'entraînement sans colonnes de fuite,
+  les libellés de découpage `train`/`validation`/`test` déterministes, les
+  prédictions et les rapports de dérive.
+- `privacy_audit_log` stocke les événements de redevabilité sans donnée
+  étudiante directe.
 
-The first operational sequence is:
+La première séquence opérationnelle est :
 
 ```bash
 decrochage init-db
 decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 ```
 
-Use the returned `batch_id` when persisting downstream predictions or drift
-reports.
+Réutiliser le `batch_id` renvoyé lors de la persistance des prédictions ou des
+rapports de dérive en aval.
 
-## API Contract
+## Contrat d'API
 
-- `GET /health`: liveness, returns 200 when the process runs.
-- `GET /ready`: readiness, returns 200 only when the model bundle is loaded.
-- `POST /predict`: accepts raw student records and returns `proba_abandon` plus
-  `alerte`.
-- `GET /metrics`: Prometheus metrics for availability, errors and latency.
-- `POST /admin/reload`: reloads the configured `production` alias without a
-  code redeployment; this route always requires `DECROCHAGE_API_KEY`.
-- Every response carries `X-Request-ID`; structured logs contain route, status
-  and duration, never request payloads or API keys.
-- Runtime logs are emitted as one JSON object per line to container stderr. The
-  Docker `json-file` driver rotates them at 10 MB and retains at most five files.
-- `/predict` and `/admin/reload` apply `DECROCHAGE_RATE_LIMIT_PER_MINUTE` per
-  client. A multi-instance deployment requires a shared edge limiter.
+- `GET /health` : vivacité, renvoie 200 tant que le processus tourne.
+- `GET /ready` : disponibilité, renvoie 200 uniquement quand le bundle de modèle
+  est chargé.
+- `POST /predict` : accepte des dossiers étudiants bruts et renvoie
+  `proba_abandon` ainsi que `alerte`.
+- `GET /metrics` : métriques Prometheus de disponibilité, d'erreurs et de latence.
+- `POST /admin/reload` : recharge l'alias `production` configuré sans
+  redéploiement de code ; cette route exige toujours `DECROCHAGE_API_KEY`.
+- Chaque réponse porte un `X-Request-ID` ; les journaux structurés contiennent la
+  route, le statut et la durée, jamais les payloads ni les clés d'API.
+- Les journaux d'exécution sont émis en un objet JSON par ligne sur la sortie
+  d'erreur du conteneur. Le driver Docker `json-file` les fait tourner à 10 Mo et
+  en conserve cinq fichiers au maximum.
+- `/predict` et `/admin/reload` appliquent `DECROCHAGE_RATE_LIMIT_PER_MINUTE` par
+  client. Un déploiement multi-instances exige un limiteur partagé en bordure.
 
-Set `DECROCHAGE_MODEL_PATH` to select the model bundle. Set
-`DECROCHAGE_API_KEY` to require an `X-API-Key` header. Set
-`DECROCHAGE_PSEUDONYMIZATION_SECRET` before persisting Silver, Gold or
-prediction rows.
+Définir `DECROCHAGE_MODEL_PATH` pour choisir le bundle de modèle. Définir
+`DECROCHAGE_API_KEY` pour exiger un en-tête `X-API-Key`. Définir
+`DECROCHAGE_PSEUDONYMIZATION_SECRET` avant toute persistance de lignes Silver,
+Gold ou de prédictions.
 
-## Deployment
+## Déploiement
 
-Build and run locally:
+Construire et lancer en local :
 
 ```bash
 docker compose up --build
 ```
 
-Run the complete operational stack (scheduler, Caddy, Prometheus and Grafana included):
+Lancer la stack opérationnelle complète (planificateur, Caddy, Prometheus et
+Grafana inclus) :
 
 ```bash
 docker compose --profile run up --build
 ```
 
-Grafana provisions the `Décrochage L1 - Run API` dashboard and its alert rules
-from versioned files under `monitoring/grafana/provisioning`.
+Grafana provisionne le tableau de bord `Décrochage L1 - Run API` et ses règles
+d'alerte depuis des fichiers versionnés sous
+`monitoring/grafana/provisioning`.
 
-The production recommendation, indicative TCO, alternatives and operational
-trade-offs are documented in `docs/run_architecture.md`; incident actions are
-in `docs/runbook.md`.
+La recommandation de production, le TCO indicatif, les alternatives et les
+arbitrages d'exploitation sont documentés dans `docs/run_architecture.md` ; les
+actions en cas d'incident sont dans `docs/runbook.md`.
 
-This is intentionally a lightweight serving image: no notebook server and no
-presentation assets. Database persistence is handled by the SQLAlchemy layer and
-can use the local SQLite default or the Compose Postgres service.
+C'est volontairement une image de service légère : ni serveur de notebook, ni
+ressources de présentation. La persistance en base est prise en charge par la
+couche SQLAlchemy et peut utiliser le SQLite local par défaut ou le service
+Postgres de Compose.
