@@ -390,7 +390,7 @@ JAMAIS pour prédire abandon.
 - **Sécurité API** : clé, limite de débit, requêtes corrélées sans journaliser les données.
 - **Cycle de vie** : runs MLflow (paramètres, métriques, artefacts), registre + rollback.
 - **Observabilité** : `/metrics`, dashboard Grafana provisionné, alertes et heartbeat.
-- **Qualité** : 52 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
+- **Qualité** : 59 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
 - Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
 
 <!--
