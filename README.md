@@ -31,16 +31,16 @@ examen/
 │   ├── training.py             # entraînement industrialisé train/validation/test
 │   ├── serving.py              # bundle modèle + fonction predict (contrat C6)
 │   ├── monitoring.py           # rapport de dérive PSI (C9)
-│   ├── operations.py           # politique Run : réentraînement + gate de promotion
-│   ├── registry.py             # aliases MLflow candidate/production/archived
+│   ├── operations.py           # politique Run : réentraînement + barrière de promotion
+│   ├── registry.py             # alias MLflow candidate/production/archived
 │   ├── tracking.py             # runs MLflow : paramètres, métriques, artefacts
-│   ├── alerting.py             # anti-spam + heartbeat des jobs planifiés
+│   ├── alerting.py             # anti-spam + heartbeat des tâches planifiées
 │   ├── scheduler.py            # contrôles de dérive et réentraînement planifiés
 │   ├── persistence.py          # persistance SQL + couches Bronze/Silver/Gold
 │   ├── api.py                  # API FastAPI /health /ready /predict
 │   └── cli.py                  # commandes batch et service
-├── docs/                       # model card, industrialisation, monitoring, menaces
-├── tests/                      # tests unitaires et contrats API/serving
+├── docs/                       # fiche modèle, industrialisation, surveillance, menaces
+├── tests/                      # tests unitaires et contrats API/service
 ├── artifacts/
 │   ├── models/                 # bundle sérialisé (joblib)
 │   └── figures/                # graphiques exportés
@@ -82,18 +82,18 @@ uv run ruff check . ; uv run black --check . ; uv run pytest
 
 ## Industrialisation
 
-Le notebook reste le livrable certifiant. Le chemin production léger est porté
+Le notebook reste le livrable certifiant. Le chemin d'exploitation léger est porté
 par le package : entraînement avec seuil choisi sur validation, bundle joblib,
 CLI, API FastAPI, persistance SQL en architecture médaillon, Dockerfile, CI
 GitHub Actions et rapport de dérive PSI. Le dispositif d'exploitation ajoute le cycle de vie complet :
-reverse-proxy Caddy/HTTPS, métriques Prometheus, dashboard et alertes Grafana,
+reverse-proxy Caddy/HTTPS, métriques Prometheus, tableau de bord et alertes Grafana,
 ordonnanceur APScheduler avec heartbeat, politique annuelle de réentraînement,
 runs MLflow et promotion/rollback avec validation humaine. L'API ajoute une
 limite de débit et des journaux corrélés par `X-Request-ID` sans données étudiantes. La stack Docker
 Compose fournit une base Postgres locale ; `DECROCHAGE_DATABASE_URL` permet de viser une autre base
 compatible SQLAlchemy. Toute persistance BDD pseudonymise les identifiants
 directs à partir de Silver par HMAC-SHA-256 via
-`DECROCHAGE_PSEUDONYMIZATION_SECRET`; Bronze reste brut et doit donc être
+`DECROCHAGE_PSEUDONYMIZATION_SECRET` ; Bronze reste brut et doit donc être
 restreint, audité et purgé. Voir
 `docs/industrialisation.md`, `docs/rgpd_accountability.md`,
 `docs/model_card.md`, `docs/monitoring_plan.md`, `docs/run_architecture.md`,
