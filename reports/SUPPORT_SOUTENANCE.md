@@ -601,20 +601,25 @@ lance la suite de tests.)*
 
 « L'architecture de données suit un découpage en médaillon.
 
-Bronze contient les lignes sources telles quelles, avec les données personnelles. Je
-l'assume, et c'est une question qu'on peut me poser : pourquoi garder du brut ? Parce
-que c'est la zone de traçabilité et de reprise — celle qui permet de rejouer un
-traitement, de corriger une erreur d'ingestion, ou de répondre à une réclamation d'un
-étudiant. En contrepartie, elle est d'accès restreint, auditée, et purgée à échéance.
+Bronze contient les lignes sources telles quelles, avec les données personnelles.
+Pourquoi garder du brut ? Parce que c'est la zone de traçabilité et de reprise :
+rejouer un traitement, corriger une erreur d'ingestion, répondre à la réclamation d'un
+étudiant. En contrepartie, elle est d'accès restreint et auditée.
 
 Dès la couche Silver, les identifiants directs sont remplacés par un pseudonyme
 calculé par HMAC. Gold porte les variables, les scores et les rapports de dérive —
 sans aucun identifiant en clair. Autrement dit, l'entraînement comme le scoring se
 font sur des données déjà pseudonymisées.
 
-Chaque lot porte une date d'expiration, et une commande de purge supprime les lots
-échus. Toutes les opérations sont journalisées dans une table d'audit, ce qui me
-permet de répondre à la question « qui a fait quoi, quand, sur quelles données ».
+Concrètement, la rétention fonctionne comme ceci : chaque lot d'ingestion reçoit une
+date d'expiration — un an par défaut, c'est configurable. La commande `purge-expired`
+récupère les lots échus, supprime en cascade tout ce qui s'y rattache — de Bronze
+jusqu'aux prédictions — puis journalise l'opération. En production, cette commande
+serait planifiée ; aujourd'hui, mon ordonnanceur ne pilote que le contrôle de dérive
+et le réentraînement.
+
+Et toutes les opérations sensibles sont tracées dans une table d'audit : qui a fait
+quoi, quand, sur quelles données.
 
 La protection est donc dans la plomberie, pas dans une note d'intention. »
 
@@ -844,6 +849,7 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **Pourquoi prédire `moyenne_finale` si vous l'avez exclue ?** | Exclue comme variable **explicative** (c'était la fuite), pas comme **cible**. Le modèle de régression la prédit à partir des mêmes 31 variables de mi-semestre : elle est en sortie, jamais en entrée. |
 | **Pourquoi ce seuil ?** | Minimisation du coût métier sur la **validation** ; FN 5× plus coûteux qu'un FP ; le test reste intact. |
 | **Votre modèle discrimine-t-il ?** | Retirer `sexe` ne suffit pas (proxys) → audit par sous-groupes, écart de rappel 1,9 pt, et décision humaine. **Tableau complet : notebook §12.4.** |
+| **Comment se fait la purge, concrètement ?** | Chaque lot porte un `expires_at` (rétention configurable, 365 j par défaut). `decrochage purge-expired` sélectionne les lots échus, supprime en cascade Bronze/Silver/Gold/prédictions/rapports, et écrit une entrée `retention_purge` dans le journal d'audit. À planifier en production — le scheduler actuel ne gère que dérive et réentraînement. |
 | **Bronze contient des données personnelles ?** | Oui, assumé : zone restreinte de traçabilité et de reprise, purgée ; Silver et Gold sont pseudonymisés. |
 | **Et la dérive en production ?** | `drift-report` (PSI), seuils `watch`/`alert`, persistance en Gold ; dérive = investigation. |
 | **Pourquoi pas un réentraînement mensuel ?** | Les labels d'abandon arrivent **par cohorte** : réentraîner mensuellement, c'est apprendre sur des étiquettes inexistantes. |
