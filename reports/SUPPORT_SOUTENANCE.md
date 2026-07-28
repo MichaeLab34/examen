@@ -65,7 +65,7 @@ Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramèn
 | Régression | R² ≈ **0,68**, erreur ≈ **2,3 pts/20** | slide 17 |
 | Leurres | écart-type **1,6 à 2,3 pts** → aucun signal | slide 9 |
 | Éco-conception | boosting ≈ **×10**, RF ≈ **×20-30**, gain nul | slide 11 |
-| Tests | **52** tests, CI verte | slide 18 — *chiffre affiché ; 59 dans le dépôt* |
+| Tests | **59** tests, CI verte | slide 18 |
 | Budget infra | **0 €** sur le serveur du LMS · sinon **10-20 €/mois** | slide 20 |
 
 ---
@@ -586,12 +586,8 @@ traitement par lots, une API FastAPI avec un contrat d'entrée-sortie explicite 
 scoring à la demande. Les trois importent le même code : je n'ai pas trois versions du
 nettoyage qui finiraient par diverger.
 
-Autour : 52 tests automatisés, une intégration continue, et une image Docker qui ne
+Autour : 59 tests automatisés, une intégration continue, et une image Docker qui ne
 tourne pas en root. »
-
-*(Je dis 52, le chiffre affiché sur la slide. Le dépôt en compte 59 aujourd'hui —
-j'annonce donc moins que la réalité, ce qui ne pose aucun problème si un examinateur
-lance la suite de tests.)*
 
 ---
 
@@ -903,13 +899,6 @@ prendrais : … » — bien meilleur qu'une improvisation.
 **Circuit quand un chiffre ou un texte change** : modifier `soutenance_slides.md` →
 régénérer sous `soutenance_slides.pptx` → repasser par l'outil de mise en forme →
 remplacer `SUPPORT_SOUTENANCE.pptx` → mettre à jour l'antisèche de ce conducteur.
-
-**⚠️ Écarts entre la source à jour et le PPTX livré** — à corriger si je régénère :
-
-| Sujet | PPTX projeté | Source à jour |
-|---|---|---|
-| Tests (slide 18) | 52 | 59 |
-| Hébergement (slide 20) | VPS uniquement | serveur du LMS **ou** VPS |
 
 **État actuel du livrable** : 33 slides (les 2 slides de backup de la source n'y sont
 pas — voir la section Questions ci-dessus, qui les remplace), notes orateur présentes
