@@ -61,7 +61,7 @@ Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramèn
 | Seuil retenu | **0,30** (et non 0,5) | slide 14 |
 | Rappel au seuil | **95,9 %** · précision **63,5 %** | slide 14-15 |
 | Coût métier | **FN:FP = 5:1** — hypothèse assumée | slide 14 |
-| Équité | écart de rappel **1,9 pt** (alerte à 10 pts) | slide 16 |
+| Équité | rappels **0,946 → 0,966** sur `sexe`/`boursier`, écart **1,9 pt** (alerte à 10 pts) | slide 16 |
 | Régression | R² ≈ **0,68**, erreur ≈ **2,3 pts/20** | slide 17 |
 | Leurres | écart-type **1,6 à 2,3 pts** → aucun signal | slide 9 |
 | Éco-conception | boosting ≈ **×10**, RF ≈ **×20-30**, gain nul | slide 11 |
@@ -431,7 +431,7 @@ AUC sont équivalentes, voire légèrement inférieures.
 
 La dernière colonne du tableau devrait donner le surcoût de calcul par point d'AUC
 gagné. Mais comme il n'y a aucun gain, il n'y a rien à diviser — c'est pour ça qu'elle
-affiche le symbole infimi. Autrement dit : je paierais dix à trente fois plus de calcul pour
+affiche le symbole infini. Autrement dit : je paierais dix à trente fois plus de calcul pour
 n'acheter aucune performance. »
 
 *(Si on questionne la mesure elle-même — et c'est une bonne question : « sous Windows,
@@ -555,9 +555,9 @@ LMS, les retards de rendu, la motivation déclarée. Un référent peut donc com
 étudiant est signalé — et surtout, quoi lui proposer.
 
 Ensuite l'équité, que je vous avais annoncée. J'ai mesuré le rappel du modèle par
-sous-groupe : femmes, hommes, boursiers, non-boursiers, établissement d'origine. Les
-rappels vont de 0,935 à 0,975, soit un écart maximal de 1,9 point — très en dessous
-du seuil d'alerte de dix points que je me suis fixé.
+sous-groupe sensible : femmes, hommes, boursiers, non-boursiers. Les rappels vont de
+0,946 à 0,966, soit un écart maximal de 1,9 point — très en dessous du seuil d'alerte
+de dix points que je me suis fixé.
 
 Le modèle ne traite donc pas un groupe moins bien qu'un autre, et le tableau détaillé
 par sous-groupe figure dans le notebook. »
@@ -565,6 +565,14 @@ par sous-groupe figure dans le notebook. »
 *(La preuve est en §12.4 : effectif, taux d'abandon réel, taux d'alerte et rappel par
 groupe, avec l'écart maximal calculé à 0,019. À ouvrir pendant les questions si on
 demande le détail — pas maintenant.)*
+
+> ⚠️ **Ne pas citer `etablissement_origine` dans cette phrase.** Le tableau §12.4
+> l'affiche aussi, mais son rappel va de **0,667** (groupe « autre », **31 étudiants**)
+> à **1,000** (CFA, 74 étudiants). Si le jury le relève : *« ces deux modalités comptent
+> 31 et 74 étudiants : à ces effectifs, un rappel se déplace de plusieurs points dès
+> qu'un seul étudiant change de côté. Je ne pilote donc l'alerte d'équité que sur `sexe`
+> et `boursier`, où les effectifs le permettent — et je surveille l'origine scolaire
+> sans en faire un seuil bloquant. »* C'est la bonne réponse : ne pas la subir.
 
 ---
 
@@ -688,9 +696,9 @@ population a trop changé pour que le modèle reste valide — auquel cas je sus
 l'usage plutôt que d'alerter à tort.
 
 Le calendrier annuel est donc un filet de sécurité, pas le seul déclencheur : si la
-dérive alerte **et** que des labels frais existent, on entraîne un candidat plus tôt.
+dérive alerte **et** que des labels récents existent, on entraîne un candidat plus tôt.
 
-Ce candidat ne passe en production qu'après une gate chiffrée — AUC, rappel, écart
+Ce candidat ne passe en production qu'après une barrière chiffrée — AUC, rappel, écart
 d'équité — et une validation humaine. Sinon, rollback : l'alias `production` repointe
 la version précédente. »
 
@@ -880,17 +888,17 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **Pourquoi prédire `moyenne_finale` si vous l'avez exclue ?** | Exclue comme variable **explicative** (c'était la fuite), pas comme **cible**. Le modèle de régression la prédit à partir des mêmes 31 variables de mi-semestre : elle est en sortie, jamais en entrée. |
 | **Pourquoi ce seuil ?** | Minimisation du coût métier sur la **validation** ; FN 5× plus coûteux qu'un FP ; le test reste intact. |
 | **Votre modèle discrimine-t-il ?** | Retirer `sexe` ne suffit pas (proxys) → audit par sous-groupes, écart de rappel 1,9 pt, et décision humaine. **Tableau complet : notebook §12.4.** |
-| **Comment se fait la purge, concrètement ?** | Chaque lot porte un `expires_at` (rétention configurable, 365 j par défaut). `decrochage purge-expired` sélectionne les lots échus, supprime en cascade Bronze/Silver/Gold/prédictions/rapports, et écrit une entrée `retention_purge` dans le journal d'audit. À planifier en production — le scheduler actuel ne gère que dérive et réentraînement. |
+| **Comment se fait la purge, concrètement ?** | Chaque lot porte un `expires_at` (rétention configurable, 365 j par défaut). `decrochage purge-expired` sélectionne les lots échus, supprime en cascade Bronze/Silver/Gold/prédictions/rapports, et écrit une entrée `retention_purge` dans le journal d'audit. À planifier en production — l'ordonnanceur actuel ne gère que dérive et réentraînement. |
 | **Bronze contient des données personnelles ?** | Oui, assumé : zone restreinte de traçabilité et de reprise, purgée ; Silver et Gold sont pseudonymisés. |
-| **Et la dérive en production ?** | `drift-report` (PSI), seuils `watch`/`alert`, persistance en Gold ; dérive = investigation. |
-| **Pourquoi surveiller la dérive si vous réentraînez annuellement ?** | Parce que je score entre deux entraînements sans pouvoir mesurer la performance (pas de labels). Le PSI est le seul signal disponible : il détecte une rupture de collecte et me dit si la population reste celle du modèle. Et si la dérive alerte **et** que des labels frais existent, `decide_retraining` autorise un candidat anticipé — l'annuel est un filet, pas le seul déclencheur. |
+| **Et la dérive en production ?** | `drift-report` (PSI), seuils `watch`/`alert`, persistance en Gold ; une dérive déclenche une enquête, pas un réentraînement. |
+| **Pourquoi surveiller la dérive si vous réentraînez annuellement ?** | Parce que je score entre deux entraînements sans pouvoir mesurer la performance (pas de labels). Le PSI est le seul signal disponible : il détecte une rupture de collecte et me dit si la population reste celle du modèle. Et si la dérive alerte **et** que des labels récents existent, `decide_retraining` autorise un candidat anticipé — l'annuel est un filet, pas le seul déclencheur. |
 | **Pourquoi pas un réentraînement mensuel ?** | Les labels d'abandon arrivent **par cohorte** : réentraîner mensuellement, c'est apprendre sur des étiquettes inexistantes. |
-| **Si le modèle se dégrade ?** | Gate chiffrée (AUC, rappel, équité) + approbation humaine + alias MLflow et rollback. |
+| **Si le modèle se dégrade ?** | Barrière chiffrée (AUC, rappel, équité) — le « Gate » affiché sur la slide 21 — + approbation humaine + alias MLflow et rollback. |
 | **Pourquoi pas Kubernetes ?** | 5 200 étudiants/an, batch rejouable : une seule machine suffit. |
 | **Où hébergeriez-vous la solution ?** | De préférence sur le serveur qui héberge déjà le LMS : les données ne sortent pas du SI, pas de sous-traitant supplémentaire, pas de coût d'hébergement. Condition : cloisonnement en conteneur avec ressources plafonnées, pour ne pas dégrader le LMS. Le VPS reste l'option de repli. |
 | **Que recouvre le TCO ?** | *Total Cost of Ownership*, le coût total de possession sur un an : hébergement, sauvegardes, temps DSI et DPO, revue annuelle du modèle, interventions. Pas seulement le serveur. |
 | **Quel ROI ?** | Le coût est chiffrable ; le gain, non — l'AUC ne mesure pas l'effet du tutorat. Méthode proposée : un pilote où une partie des étudiants signalés est accompagnée (tirage au sort), et comparaison des taux d'abandon en fin d'année. L'écart mesure l'effet réel. Je n'invente aucun chiffre. |
-| **Un job qui ne tourne plus ?** | Heartbeat externe : c'est l'absence de signal qui déclenche l'alerte. |
+| **Une tâche planifiée qui ne tourne plus ?** | Heartbeat externe : c'est l'absence de signal qui déclenche l'alerte. |
 
 **Si je ne sais pas** : « Je ne l'ai pas traité dans ce projet. Voici comment je m'y
 prendrais : … » — bien meilleur qu'une improvisation.

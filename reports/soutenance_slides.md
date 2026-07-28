@@ -353,7 +353,7 @@ mieux vaut quelques accompagnements en trop qu'un décrocheur raté. Coût d'un 
 ![w:520](../artifacts/figures/shap_summary.png)
 
 - Facteurs **actionnables** : présence, LMS, rendus, motivation.
-- **Audit d'équité** : rappel comparable F/M/boursier (**0,935–0,975**) →
+- **Audit d'équité** : rappel comparable F/M/boursier (**0,946–0,966**) →
   écart maximal **1,9 pt**, très en deçà du seuil d'alerte de **10 pts**.
 
 <!--
