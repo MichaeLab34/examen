@@ -249,8 +249,10 @@ devient inutilisable le jour où on le déploie.
 
 **Le troisième, ce sont les leurres.** L'énoncé annonce trois variables sans pouvoir
 prédictif : le groupe de TD, la couleur de la carte étudiante, le jour d'inscription.
-Je ne les ai pas retirées sur parole. J'ai tracé le taux d'abandon par modalité : il
-est plat, avec un écart-type de 1,6 à 2,3 points. Je le montre au lieu de l'affirmer.
+Je ne me suis pas contenté de les écarter parce que l'énoncé le dit : j'ai vérifié.
+J'ai tracé le taux d'abandon pour chaque modalité — il est plat, avec un écart-type de
+1,6 à 2,3 points. Je le montre au lieu de l'affirmer, et je vous montrerai le
+graphique dans trois slides.
 
 Au total, il me reste 31 variables explicatives.
 
