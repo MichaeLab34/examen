@@ -400,20 +400,23 @@ s'en servira pas. »
 
 **Je dis :**
 
-« Un mot sur la sobriété — parce que je ne voulais pas me contenter de l'affirmer.
+« Un mot sur la sobriété — que je ne voulais pas me contenter d'affirmer. J'ai donc
+mesuré, pour chaque modèle, la durée d'entraînement, l'énergie consommée et
+l'empreinte carbone estimée.
 
-J'ai instrumenté l'entraînement : pour chaque modèle, je mesure la durée, l'énergie
-consommée et l'empreinte carbone estimée, sur le mix électrique français.
+Le boosting coûte environ dix fois plus de calcul que la régression logistique ; la
+forêt aléatoire, vingt à trente fois. Et pour quel gain de performance ? Aucun : leurs
+AUC sont équivalentes, voire légèrement inférieures.
 
-Le résultat est net. Le boosting coûte environ dix fois plus de calcul que la
-régression logistique ; la forêt aléatoire, vingt à trente fois. Pour un gain d'AUC
-nul, voire négatif.
+La dernière colonne du tableau devrait donner le surcoût de calcul par point d'AUC
+gagné. Mais comme il n'y a aucun gain, il n'y a rien à diviser — c'est pour ça qu'elle
+affiche le symbole infimi. Autrement dit : je paierais dix à trente fois plus de calcul pour
+n'acheter aucune performance. »
 
-Autrement dit : le coût par point d'AUC gagné est infini. On paie du calcul et on
-n'achète aucune performance.
-
-Ce sont des ordres de grandeur — la mesure dépend de la machine, mais l'écart entre
-modèles, lui, est stable. »
+*(Si on questionne la mesure elle-même — et c'est une bonne question : « sous Windows,
+l'estimation de la consommation CPU est approximative. Ces chiffres servent à comparer
+les modèles entre eux dans une même session, pas à publier une empreinte absolue.
+L'écart entre modèles, lui, est stable d'une exécution à l'autre. »)*
 
 ---
 
