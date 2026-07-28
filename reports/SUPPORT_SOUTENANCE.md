@@ -578,13 +578,19 @@ Ce dernier point est volontaire : sans lui, le scoring dépendrait d'un fichier 
 qui pourrait avoir changé depuis l'entraînement — et le modèle appliquerait alors des
 taux de réussite différents de ceux qu'il a appris.
 
-Tout le code structurant vit dans un package Python. Le notebook, la ligne de commande
-et l'API importent exactement le même nettoyage et le même périmètre de variables.
-Trois implémentations « équivalentes » finissent toujours par diverger.
+Tout le code structurant vit dans un package Python : le nettoyage, le périmètre de
+variables, l'entraînement, le scoring.
 
-Il y a une API avec un contrat d'entrée-sortie explicite, une commande pour le
-traitement par lots, une soixantaine de tests automatisés, une intégration continue,
-et une image Docker qui ne tourne pas en root. »
+Trois surfaces l'utilisent — le notebook pour la démonstration, une CLI pour le
+traitement par lots, une API FastAPI avec un contrat d'entrée-sortie explicite pour le
+scoring à la demande. Les trois importent le même code : je n'ai pas trois versions du
+nettoyage qui finiraient par diverger.
+
+Autour : 59 tests automatisés, une intégration continue, et une image Docker qui ne
+tourne pas en root. »
+
+*(⚠️ La slide projetée affiche encore **52 tests**. Soit je dis « 52 » pour rester
+cohérent avec l'écran, soit je régénère le PPTX avant la soutenance.)*
 
 ---
 
