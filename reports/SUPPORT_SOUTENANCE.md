@@ -444,23 +444,26 @@ et la purge — servent d'ailleurs autant le RGPD que la sobriété. »
 
 **Je dis :**
 
-« Pour l'entraînement, un découpage en trois : train, validation, test.
+« Je découpe les données en trois blocs : entraînement, validation, test.
 
-Le train sert à apprendre. La validation sert à **choisir** : les hyperparamètres, le
-modèle, le seuil.
+J'entraîne le modèle sur le premier.
 
-Et le test sert à une seule chose — **mesurer**, une fois et à la fin, ce que vaut le
-modèle sur des données qu'il n'a jamais vues. C'est mon estimation de ce qu'il fera en
-production.
+Le deuxième me sert à faire mes choix : comparer les modèles entre eux, et fixer le
+seuil de décision.
+
+Le troisième, je n'y touche pas avant la fin. Il ne sert qu'à **mesurer** ce que vaut
+le modèle sur des données qu'il n'a jamais vues — c'est mon estimation de ce qu'il
+fera en production.
 
 Pourquoi ne jamais s'en servir pour choisir ? Parce que si j'avais ajusté un seul
 paramètre en regardant le test, j'aurais adapté mes décisions à ce jeu-là, et le
 chiffre final serait devenu flatteur. C'est comme réviser sur le sujet de l'examen :
 la note ne dit plus ce qu'on sait vraiment.
 
-Les hyperparamètres sont donc réglés par validation croisée, sur le train seulement.
-Et le point rassurant : l'AUC en validation croisée est équivalente à celle mesurée
-sur le test. C'est le signe qu'il n'y a pas de surapprentissage.
+Les hyperparamètres, eux, sont réglés par validation croisée à l'intérieur du bloc
+d'entraînement. Et le point rassurant : l'AUC obtenue en validation croisée est
+équivalente à celle mesurée sur le test — c'est le signe qu'il n'y a pas de
+surapprentissage.
 
 Sur le déséquilibre — 28 % de positifs — j'ai utilisé une pondération des classes
 plutôt qu'un sur-échantillonnage type SMOTE, parce que la pondération préserve la
