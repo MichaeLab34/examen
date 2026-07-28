@@ -33,8 +33,8 @@ social.
 Les contrôles applicatifs sont exécutables dans le prototype : clé d'API,
 corrélation des requêtes sans journalisation des payloads, limite de débit par
 client, plafonds de schéma, rétention et pseudonymisation. Un déploiement
-multi-instances devra remplacer le limiteur en mémoire par un limiteur partagé,
-en bordure ou adossé à Redis.
+multi-instances devra remplacer le limiteur en mémoire par un limiteur partagé :
+soit porté par le frontal, soit adossé à Redis.
 
 Avant tout traitement de données étudiantes réelles, la DSI doit fournir un
 stockage géré des secrets et un chiffrement au repos avec une rotation de clés

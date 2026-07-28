@@ -28,7 +28,7 @@ relecture humaine.
 ## Évaluation
 
 Le notebook rapporte l'AUC ROC, la précision, le rappel, le F1, la matrice de
-confusion et l'analyse du seuil métier. Le chemin d'entraînement du package
+confusion et l'analyse du seuil métier. La procédure d'entraînement du package
 choisit le seuil sur les données de validation et réserve les données de test
 au rapport final. Les métadonnées d'entraînement enregistrent également l'écart
 de rappel maximal observé entre les sous-groupes surveillés `sexe` et `boursier`.
@@ -38,7 +38,7 @@ de rappel maximal observé entre les sous-groupes surveillés `sexe` et `boursie
 Chaque entraînement ouvre un run MLflow avec ses paramètres, ses métriques et le
 bundle sérialisé en artefact. APScheduler évalue chaque semaine la dérive et la
 politique de réentraînement ; la revue annuelle reste un déclencheur parmi la
-dérive et la performance. Lorsque des labels frais justifient un entraînement, le
+dérive et la performance. Lorsque des labels récents justifient un entraînement, le
 bundle produit entre dans le registre au statut `candidate`. La promotion en
 `production` est bloquée sauf si trois conditions sont réunies : l'AUC de test
 atteint au moins 0,85 ; le rappel atteint au moins 0,90 et ne régresse pas par

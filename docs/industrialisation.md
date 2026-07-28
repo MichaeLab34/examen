@@ -22,7 +22,7 @@ opérations en ligne de commande et la surveillance.
   bundle avec séparation train/validation/test et enregistre paramètres,
   métriques et artefacts dans MLflow Tracking.
 - `decrochage predict artifacts/models/model_bundle.joblib input.csv --output reports/predictions.csv`
-  score des dossiers SI/LMS bruts. Ajouter `--persist-db --batch-id <id>` pour
+  calcule les scores de dossiers SI/LMS bruts. Ajouter `--persist-db --batch-id <id>` pour
   stocker les prédictions dans la table Gold.
 - `decrochage drift-report reference.csv current.csv --output reports/drift_report.json`
   produit un rapport de dérive PSI. Ajouter `--persist-db --batch-id <id>` pour
@@ -59,7 +59,7 @@ Git. Le secret de pseudonymisation doit rester hors du gestionnaire de versions.
 ## Suivi et registre MLflow
 
 Docker Compose expose MLflow sur `http://localhost:5000`. Ses métadonnées
-utilisent un backend SQLite isolé sous `artifacts/mlflow-server/` ; la base
+utilisent un moteur de stockage SQLite isolé sous `artifacts/mlflow-server/` ; la base
 applicative reste dédiée aux données métier. Le serveur stocke les paramètres et
 métriques des runs, le rapport d'entraînement JSON et le bundle de modèle
 sérialisé. L'enregistrement exige le `run_id` d'origine, si bien que chaque
@@ -106,10 +106,11 @@ rapports de dérive en aval.
 - Chaque réponse porte un `X-Request-ID` ; les journaux structurés contiennent la
   route, le statut et la durée, jamais les payloads ni les clés d'API.
 - Les journaux d'exécution sont émis en un objet JSON par ligne sur la sortie
-  d'erreur du conteneur. Le driver Docker `json-file` les fait tourner à 10 Mo et
-  en conserve cinq fichiers au maximum.
+  d'erreur du conteneur. Le pilote de journalisation Docker `json-file` les fait
+  tourner à 10 Mo et en conserve cinq fichiers au maximum.
 - `/predict` et `/admin/reload` appliquent `DECROCHAGE_RATE_LIMIT_PER_MINUTE` par
-  client. Un déploiement multi-instances exige un limiteur partagé en bordure.
+  client. Un déploiement multi-instances exige un limiteur partagé, porté par le
+  frontal.
 
 Définir `DECROCHAGE_MODEL_PATH` pour choisir le bundle de modèle. Définir
 `DECROCHAGE_API_KEY` pour exiger un en-tête `X-API-Key`. Définir
