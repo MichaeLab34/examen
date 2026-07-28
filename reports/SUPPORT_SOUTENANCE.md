@@ -101,7 +101,7 @@ minute. Je débite un peu plus vite sur les scènes denses et je respire sur les
 
 | | Slides |
 |---|---|
-| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 13, 14, 17, 19, 21** |
+| ⏩ **Denses** — j'avance, je ne m'attarde pas | **4, 5, 7, 9, 10, 13, 14, 17, 19, 21, 30** |
 | 🫁 **Avec marge** — je ralentis, je laisse des silences | **20, 23 à 29, 33** |
 
 Les denses sont celles où j'explique un mécanisme (les fuites, les proxys, les
@@ -732,21 +732,28 @@ stack conteneurisée. »
 
 **Je dis :**
 
-« Un mot sur le coût et sur la valeur.
+« TCO, ça veut dire *coût total de possession* : tout ce que la solution coûte sur un
+an, pas seulement le serveur. L'hébergement, les sauvegardes, le temps que la DSI y
+passe, celui du délégué à la protection des données, la revue annuelle du modèle.
+Ça, c'est chiffrable — et c'est modeste.
 
-Le coût total, ce n'est pas seulement l'hébergement : c'est aussi les sauvegardes, le
-temps de la DSI et du délégué à la protection des données, la revue annuelle du
-modèle, les interventions.
+Le gain, lui, je ne peux pas le chiffrer, et je ne vais pas faire semblant. Dire
+« mon modèle a 0,95 d'AUC, donc l'université économise tant » serait malhonnête :
+l'AUC mesure la capacité du modèle à classer les étudiants, elle ne dit rien de
+l'efficacité du tutorat. Le modèle repère ; c'est l'accompagnement qui sauve — ou pas.
 
-Sur la valeur, j'ai fait un choix que j'assume : je n'ai pas converti mon AUC en euros
-économisés. Ce serait très vendeur, et complètement infondé. L'AUC mesure la capacité
-du modèle à discriminer ; elle ne mesure pas l'effet du tutorat sur un étudiant.
+Ce que je propose à la place, c'est la méthode pour le mesurer. Un pilote sur une
+promotion : je signale tous les étudiants à risque, on en accompagne une partie tirée
+au sort, et on compare le taux d'abandon des deux groupes en fin d'année. L'écart
+entre les deux, c'est l'effet réel du dispositif — et lui, il se mesure.
 
-Ce que je propose à la place, c'est la méthode de mesure : un pilote progressif, avec
-un groupe témoin, pour estimer l'effet réel du dispositif.
+Multiplié par le nombre d'étudiants qu'on peut réellement accompagner, ça donne la
+valeur du dispositif : un chiffre fondé sur une mesure, pas sur une hypothèse. »
 
-La valeur, c'est le nombre d'étudiants utilement accompagnés multiplié par l'effet
-causal de l'accompagnement — et cet effet, seule une expérimentation peut le donner. »
+*(Si on objecte l'éthique du groupe témoin : « on ne retire rien à personne —
+aujourd'hui, aucun de ces étudiants n'est repéré. Le pilote élargit l'accompagnement à
+une partie d'entre eux. Et la capacité de tutorat étant limitée, il faut de toute
+façon choisir qui accompagner. »)*
 
 ---
 
@@ -860,7 +867,8 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **Si le modèle se dégrade ?** | Gate chiffrée (AUC, rappel, équité) + approbation humaine + alias MLflow et rollback. |
 | **Pourquoi pas Kubernetes ?** | 5 200 étudiants/an, batch rejouable : une seule machine suffit. |
 | **Où hébergeriez-vous la solution ?** | De préférence sur le serveur qui héberge déjà le LMS : les données ne sortent pas du SI, pas de sous-traitant supplémentaire, pas de coût d'hébergement. Condition : cloisonnement en conteneur avec ressources plafonnées, pour ne pas dégrader le LMS. Le VPS reste l'option de repli. |
-| **Quel ROI ?** | TCO chiffrable, valeur mesurable **par un pilote causal** ; je n'invente aucun gain à partir de l'AUC. |
+| **Que recouvre le TCO ?** | *Total Cost of Ownership*, le coût total de possession sur un an : hébergement, sauvegardes, temps DSI et DPO, revue annuelle du modèle, interventions. Pas seulement le serveur. |
+| **Quel ROI ?** | Le coût est chiffrable ; le gain, non — l'AUC ne mesure pas l'effet du tutorat. Méthode proposée : un pilote où une partie des étudiants signalés est accompagnée (tirage au sort), et comparaison des taux d'abandon en fin d'année. L'écart mesure l'effet réel. Je n'invente aucun chiffre. |
 | **Un job qui ne tourne plus ?** | Heartbeat externe : c'est l'absence de signal qui déclenche l'alerte. |
 
 **Si je ne sais pas** : « Je ne l'ai pas traité dans ce projet. Voici comment je m'y
