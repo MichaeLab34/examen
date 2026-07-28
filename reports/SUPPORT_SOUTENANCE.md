@@ -344,8 +344,8 @@ l'entraînement. »
 étudiants qui poursuivent, en foncé ceux qui décrochent.
 
 On voit nettement que les étudiants qui décrochent sont moins présents en cours, se
-connectent moins à la plateforme pédagogique, rendent davantage de devoirs en retard,
-et déclarent une motivation plus basse.
+connectent moins au LMS — la plateforme pédagogique de l'établissement —, rendent
+davantage de devoirs en retard, et déclarent une motivation plus basse.
 
 Deux remarques. Les courbes se chevauchent : aucun de ces signaux ne suffit à lui
 seul, c'est leur combinaison qui porte l'information. Et ce sont des facteurs sur
@@ -529,8 +529,8 @@ remonte le seuil et on inverse l'arbitrage. C'est un paramètre, pas une fatalit
 
 D'abord l'explicabilité. Ce graphique est un summary plot SHAP : il donne la
 contribution de chaque variable à la prédiction, et son sens. Les facteurs qui pèsent
-le plus sont ceux sur lesquels on peut agir : le taux de présence, l'activité LMS, les
-retards de rendu, la motivation déclarée. Un référent peut donc comprendre pourquoi un
+le plus sont ceux sur lesquels on peut agir : le taux de présence, l'activité sur le
+LMS, les retards de rendu, la motivation déclarée. Un référent peut donc comprendre pourquoi un
 étudiant est signalé — et surtout, quoi lui proposer.
 
 Ensuite l'équité, que je vous avais annoncée. J'ai mesuré le rappel du modèle par
@@ -823,6 +823,7 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | Question | Ma réponse en une phrase |
 |---|---|
 | **Il n'y a pas une fuite ?** | Trois pièges traités, périmètre codé dans `features.py`, garde-fou `assert_no_leakage` qui fait échouer le pipeline. |
+| **Qu'appelez-vous LMS ?** | Le *Learning Management System* — la plateforme pédagogique en ligne (type Moodle) : cours, dépôts de devoirs, forum. J'en tire les connexions sur 30 jours et les heures cumulées. |
 | **95 % d'AUC, c'est suspect** | Périmètre verrouillé + réaudit colonne par colonne + **données synthétiques à signal fort** ; à revalider sur données réelles. |
 | **Pourquoi pas XGBoost ?** | AUC équivalente, mais moins explicable et **un ordre de grandeur de calcul en plus** — je l'ai mesuré. |
 | **Éco-conception ?** | Coût mesuré par modèle, coût par point d'AUC, 6 leviers ; le principal est la **fréquence de réentraînement**. |
