@@ -538,7 +538,13 @@ sous-groupe : femmes, hommes, boursiers, non-boursiers, établissement d'origine
 rappels vont de 0,935 à 0,975, soit un écart maximal de 1,9 point — très en dessous
 du seuil d'alerte de dix points que je me suis fixé.
 
-Le modèle ne traite donc pas un groupe moins bien qu'un autre, et je peux le prouver. »
+Le modèle ne traite donc pas un groupe moins bien qu'un autre. Le tableau complet,
+sous-groupe par sous-groupe avec les effectifs, est dans le notebook en section 12.4 —
+je peux vous l'ouvrir. »
+
+*(Si on demande à voir : notebook §12.4, le tableau donne par groupe l'effectif, le
+taux d'abandon réel, le taux d'alerte et le rappel. L'écart maximal y est calculé :
+0,019.)*
 
 ---
 
@@ -828,7 +834,7 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **Pourquoi pas XGBoost ?** | AUC équivalente, mais moins explicable et **un ordre de grandeur de calcul en plus** — je l'ai mesuré. |
 | **Éco-conception ?** | Coût mesuré par modèle, coût par point d'AUC, 6 leviers ; le principal est la **fréquence de réentraînement**. |
 | **Pourquoi ce seuil ?** | Minimisation du coût métier sur la **validation** ; FN 5× plus coûteux qu'un FP ; le test reste intact. |
-| **Votre modèle discrimine-t-il ?** | Retirer `sexe` ne suffit pas (proxys) → audit par sous-groupes, écart de rappel 1,9 pt, et décision humaine. |
+| **Votre modèle discrimine-t-il ?** | Retirer `sexe` ne suffit pas (proxys) → audit par sous-groupes, écart de rappel 1,9 pt, et décision humaine. **Tableau complet : notebook §12.4.** |
 | **Bronze contient des données personnelles ?** | Oui, assumé : zone restreinte de traçabilité et de reprise, purgée ; Silver et Gold sont pseudonymisés. |
 | **Et la dérive en production ?** | `drift-report` (PSI), seuils `watch`/`alert`, persistance en Gold ; dérive = investigation. |
 | **Pourquoi pas un réentraînement mensuel ?** | Les labels d'abandon arrivent **par cohorte** : réentraîner mensuellement, c'est apprendre sur des étiquettes inexistantes. |
@@ -846,7 +852,8 @@ prendrais : … » — bien meilleur qu'une improvisation.
 
 - [ ] PPTX ouvert en **mode présentateur**, notes visibles (elles sont dans le fichier)
 - [ ] Ce conducteur ouvert à côté, ou imprimé
-- [ ] Notebook `decrochage_etudiant.ipynb` ouvert **exécuté**, prêt à montrer §8.3 et §12
+- [ ] Notebook `decrochage_etudiant.ipynb` ouvert **exécuté**, prêt à montrer :
+      **§8.3** coût de calcul · **§12.4** tableau d'équité · **§12.2-12.3** SHAP
 - [ ] Journal de bord ouvert (on peut me demander une décision datée)
 - [ ] Dépôt GitHub ouvert dans un onglet : `github.com/MichaeLab34/examen`
 - [ ] Chronomètre lancé au début, repères 6:30 / 15:00 / 22:00 en tête
