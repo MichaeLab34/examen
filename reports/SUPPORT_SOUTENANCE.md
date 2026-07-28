@@ -444,26 +444,22 @@ et la purge — servent d'ailleurs autant le RGPD que la sobriété. »
 
 **Je dis :**
 
-« Je découpe les données en trois blocs : entraînement, validation, test.
+« Je découpe les données en trois : train, validation, test.
 
-J'entraîne le modèle sur le premier.
+J'entraîne le modèle sur le train. La validation me sert à faire mes choix : comparer
+les modèles et fixer le seuil de décision.
 
-Le deuxième me sert à faire mes choix : comparer les modèles entre eux, et fixer le
-seuil de décision.
+Le test, je n'y touche pas avant la fin. Il ne sert qu'à mesurer la performance du
+modèle final sur des données jamais vues — c'est mon estimation de ce qu'il donnera en
+production.
 
-Le troisième, je n'y touche pas avant la fin. Il ne sert qu'à **mesurer** ce que vaut
-le modèle sur des données qu'il n'a jamais vues — c'est mon estimation de ce qu'il
-fera en production.
+S'il avait servi à choisir un hyperparamètre ou un seuil, cette estimation serait
+optimiste : le modèle aurait été ajusté à ce jeu précis, et le test perdrait sa valeur
+de mesure indépendante.
 
-Pourquoi ne jamais s'en servir pour choisir ? Parce que si j'avais ajusté un seul
-paramètre en regardant le test, j'aurais adapté mes décisions à ce jeu-là, et le
-chiffre final serait devenu flatteur. C'est comme réviser sur le sujet de l'examen :
-la note ne dit plus ce qu'on sait vraiment.
-
-Les hyperparamètres, eux, sont réglés par validation croisée à l'intérieur du bloc
-d'entraînement. Et le point rassurant : l'AUC obtenue en validation croisée est
-équivalente à celle mesurée sur le test — c'est le signe qu'il n'y a pas de
-surapprentissage.
+Les hyperparamètres, eux, sont réglés par validation croisée stratifiée à l'intérieur
+du train. Et le point rassurant : l'AUC obtenue en validation croisée est équivalente
+à celle mesurée sur le test — pas de surapprentissage.
 
 Sur le déséquilibre — 28 % de positifs — j'ai utilisé une pondération des classes
 plutôt qu'un sur-échantillonnage type SMOTE, parce que la pondération préserve la
@@ -531,11 +527,11 @@ inverse l'arbitrage. C'est un paramètre, pas une fatalité. »
 
 « Deux choses sur cette slide.
 
-D'abord l'explicabilité. Ce graphique montre la contribution de chaque variable aux
-prédictions. Les facteurs qui pèsent sont ceux sur lesquels on peut agir : la
-présence, l'activité sur la plateforme, les rendus, la motivation déclarée. Un
-référent peut donc comprendre pourquoi un étudiant est signalé — et surtout, quoi lui
-proposer.
+D'abord l'explicabilité. Ce graphique est un summary plot SHAP : il donne la
+contribution de chaque variable à la prédiction, et son sens. Les facteurs qui pèsent
+le plus sont ceux sur lesquels on peut agir : le taux de présence, l'activité LMS, les
+retards de rendu, la motivation déclarée. Un référent peut donc comprendre pourquoi un
+étudiant est signalé — et surtout, quoi lui proposer.
 
 Ensuite l'équité, que je vous avais annoncée. J'ai mesuré le rappel du modèle par
 sous-groupe : femmes, hommes, boursiers, non-boursiers, établissement d'origine. Les
@@ -645,15 +641,15 @@ vérité terrain, c'est-à-dire le fait qu'un étudiant ait abandonné ou non, n
 qu'une fois la cohorte terminée. Réentraîner mensuellement, ce serait réapprendre sur
 des étiquettes qui n'existent pas encore.
 
-La politique retenue : un contrôle à chaque lot, avec un indice de dérive par
-variable. Si une dérive est détectée, elle déclenche une investigation sur la collecte
-— pas un réentraînement à l'aveugle. Le réentraînement, lui, est annuel, quand les
-nouvelles étiquettes arrivent.
+La politique retenue : un contrôle du data drift à chaque lot, par le PSI de chaque
+variable numérique. Au-delà du seuil d'alerte, ça déclenche une investigation sur la
+collecte — pas un réentraînement à l'aveugle. Le réentraînement, lui, est annuel,
+quand les nouvelles étiquettes arrivent.
 
-Chaque entraînement est tracé. Un modèle candidat ne passe en production que s'il
-franchit une barrière chiffrée — AUC, rappel, écart d'équité — et surtout après
-validation humaine. En cas de problème, on repointe la version précédente : c'est un
-retour arrière en une commande. »
+Chaque entraînement est tracé dans MLflow. Un candidat ne passe en production que
+s'il franchit une gate chiffrée — AUC, rappel, écart d'équité — et après validation
+humaine. En cas de problème, on repointe l'alias `production` sur la version
+précédente : c'est un rollback en une commande. »
 
 ---
 
