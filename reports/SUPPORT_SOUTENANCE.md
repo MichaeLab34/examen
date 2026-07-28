@@ -515,9 +515,9 @@ n'avaient pas besoin — c'est très préférable à un décrocheur qu'on laisse
 pour eux, la conséquence est légère : on leur propose un entretien, on ne les
 sanctionne pas.
 
-Et si la direction estimait que le coût d'une fausse alerte est plus élevé que ce que
-j'ai supposé — par exemple parce que les tuteurs saturent — on remonte le seuil et on
-inverse l'arbitrage. C'est un paramètre, pas une fatalité. »
+Et si les équipes pédagogiques estimaient que le coût d'une fausse alerte est plus
+élevé que ce que j'ai supposé — parce que les tuteurs saturent, par exemple — on
+remonte le seuil et on inverse l'arbitrage. C'est un paramètre, pas une fatalité. »
 
 ---
 
