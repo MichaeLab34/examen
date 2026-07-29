@@ -9,6 +9,7 @@ final reporting on an untouched test set.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -277,7 +278,20 @@ def train_model(
     proba_test = final_model.predict_proba(X_test)[:, 1]
     pred_test = (proba_test >= threshold).astype(int)
     fairness_gap, subgroup_recalls = subgroup_recall_gap(X_test, y_test, pred_test)
+    # Stamped on the bundle itself so every downstream consumer can say *which*
+    # model produced a score. `persistence.persist_predictions` reads exactly
+    # these keys; without them `gold_prediction.model_version` stays NULL and the
+    # portal can only display "non renseigné" — a decision that cannot be traced
+    # back to a model is not auditable.
+    #
+    # The `local-` prefix is deliberate: this is not a registry version. When the
+    # model is promoted, MLflow assigns a numeric version that takes precedence
+    # (see `api.load_configured_bundle`). The prefix keeps the two apart at a
+    # glance instead of letting a local build pass for a promoted one.
+    trained_at = datetime.now(timezone.utc)
     metrics: dict[str, Any] = {
+        "trained_at": trained_at.isoformat(timespec="seconds"),
+        "model_version": f"local-{trained_at:%Y%m%d-%H%M%S}",
         "auc_cv": float(search.best_score_),
         "auc_test": float(roc_auc_score(y_test, proba_test)),
         "average_precision_test": float(average_precision_score(y_test, proba_test)),

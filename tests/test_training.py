@@ -50,3 +50,28 @@ def test_subgroup_recall_gap_returns_largest_monitored_gap() -> None:
 
     assert gap == 0.5
     assert details["sexe"] == {"F": 1.0, "M": 0.5}
+
+
+def test_train_model_stamps_the_bundle_with_a_traceable_version() -> None:
+    """A score must always be attributable to a specific model.
+
+    `persistence.persist_predictions` reads `model_version` then `trained_at`
+    from the bundle metadata. When neither exists, `gold_prediction.model_version`
+    stays NULL and the portal can only show "non renseigné" — a decision nobody
+    can trace back to a model.
+    """
+    from datetime import datetime
+
+    from conftest import catalogue_rows, student_rows
+    from decrochage.training import train_model
+
+    students = student_rows(120)
+    result = train_model(students, catalogue_rows())
+    metadata = result.bundle.metadata
+
+    assert metadata["model_version"].startswith("local-")
+    # The prefix keeps a local build from passing for a promoted registry
+    # version, which is numeric and assigned by MLflow.
+    assert not metadata["model_version"].lstrip("local-").isdigit()
+    parsed = datetime.fromisoformat(metadata["trained_at"])
+    assert parsed.tzinfo is not None
