@@ -38,6 +38,49 @@
 3. Ne jamais ajouter le payload étudiant ou la clé d'API aux journaux.
 4. En déploiement multi-instance, activer un limiteur partagé au niveau du point d'entrée.
 
+## Mise en service du portail dans la stack Docker
+
+Le portail est un service de restitution : il n'affiche que ce qui est déjà en
+base. Sur une base neuve, les écrans sont vides tant que les quatre étapes
+ci-dessous n'ont pas été faites, dans cet ordre.
+
+```powershell
+docker compose --profile run up -d --build      # l'image doit contenir portal/
+docker compose exec api decrochage init-db      # crée les tables, dont portal_user
+```
+
+Chargement d'un lot et persistance des scores. Le service `api` ne monte pas
+`./data` — ces deux commandes se lancent donc **depuis l'hôte**, en visant le
+port Postgres publié :
+
+```powershell
+$env:DECROCHAGE_DATABASE_URL = "postgresql+psycopg://<user>:<mdp>@localhost:5432/decrochage"
+$env:DECROCHAGE_PSEUDONYMIZATION_SECRET = "<même valeur que la stack>"
+uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
+uv run decrochage predict artifacts/models/model_bundle.joblib data/raw/decrochage_etudiants_complet_V5.csv --persist-db --batch-id <batch_id>
+```
+
+Le secret de pseudonymisation **doit être identique** à celui du conteneur :
+c'est lui qui produit les pseudonymes, et deux secrets différents donneraient des
+identifiants que le portail ne saurait pas rapprocher.
+
+Création des comptes — **dans le conteneur, jamais depuis l'hôte** :
+
+```powershell
+docker compose exec api decrochage portal-user-add <identifiant> --role referent --filieres "Informatique"
+```
+
+Le CLI ne lit pas `.env` (le projet n'embarque pas `python-dotenv`) : lancé depuis
+l'hôte sans `DECROCHAGE_DATABASE_URL`, il écrirait le compte dans la base SQLite
+locale, et le portail conteneurisé ne le verrait jamais. `docker compose exec`
+alloue un TTY, la saisie masquée du mot de passe fonctionne donc normalement.
+
+Accès : **`https://localhost/portal/login`**, par Caddy. Ne pas passer par
+`http://localhost:8000` : le cookie de session porte `Secure`, un navigateur ne
+le renvoie pas en clair, et la connexion boucle sans message d'erreur. Pour un
+accès local en HTTP assumé, et seulement dans ce cas,
+`DECROCHAGE_PORTAL_ALLOW_INSECURE_COOKIE=true`.
+
 ## Portail inaccessible
 
 1. Vérifier que `DECROCHAGE_PORTAL_ENABLED=true` : désactivé, `/portal/*` renvoie
@@ -50,6 +93,14 @@
 4. Contrôler la CSP côté Caddy si la page s'affiche sans style : un style ou un
    script en ligne introduit par erreur serait bloqué — c'est le comportement
    voulu, corriger le gabarit et non la CSP.
+5. Une connexion qui « réussit » puis renvoie aussitôt au formulaire, sans
+   message : le cookie de session n'est pas revenu. Vérifier qu'on accède bien
+   en HTTPS et non en HTTP direct sur le port 8000.
+6. Après modification du `Caddyfile`, redémarrer le conteneur `caddy` : il ne
+   relit pas le fichier monté à chaud, et servirait l'ancienne configuration.
+7. Un en-tête présent en double (deux `Content-Security-Policy`) signale que la
+   directive `defer` a disparu du bloc `header` : le navigateur applique alors
+   l'intersection des deux politiques.
 
 ## Compte portail verrouillé ou compromis
 

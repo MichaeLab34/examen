@@ -3,6 +3,12 @@
     reverse_proxy api:8000
 
     header {
+        # `defer` applique ces en-têtes APRÈS la réponse de l'application, si
+        # bien qu'ils la remplacent au lieu de s'y ajouter. Sans lui, le portail
+        # — qui pose déjà les mêmes en-têtes pour ne pas dépendre d'un proxy —
+        # produirait deux CSP : le navigateur applique alors leur intersection,
+        # et la moindre divergence future casserait la page sans message clair.
+        defer
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"

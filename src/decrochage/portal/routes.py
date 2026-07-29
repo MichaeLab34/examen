@@ -75,8 +75,9 @@ NO_STORE_HEADERS = {
 # Set by the application itself, not only by the Caddyfile: the portal must not
 # depend on a reverse proxy being in front of it for its main anti-XSS control.
 # A local run, a different ingress or a misordered route would otherwise serve
-# HTML with no policy at all. Caddy sets the same values, and a `header` block
-# replaces rather than appends, so nothing is duplicated downstream.
+# HTML with no policy at all. The Caddyfile sets the same values and relies on
+# its `defer` directive to replace these rather than append to them — without
+# `defer` the browser receives two CSP headers and enforces their intersection.
 HTML_SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; img-src 'self' data:; style-src 'self'; "
