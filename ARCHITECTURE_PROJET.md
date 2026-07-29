@@ -57,7 +57,16 @@ examen/
 │   ├── logging_config.py       # journaux JSON structurés
 │   ├── schemas.py              # schémas Pydantic du contrat d'API
 │   ├── api.py                  # FastAPI : /health, /ready, /predict, /metrics, /admin/reload
-│   └── cli.py                  # 15 commandes : données, BDD, entraînement, scoring, Run
+│   ├── portal/                 # portail de restitution aux référents (bloc C7 « Restitution »)
+│   │   ├── config.py           # PortalSettings (activation, secret de session, plafonds)
+│   │   ├── models.py           # PortalUser : comptes d'agents, rôles, périmètre de filières
+│   │   ├── security.py         # Argon2id, cookie signé, CSRF, verrouillage des tentatives
+│   │   ├── repository.py       # lectures SQL, périmètre fail-closed, liste blanche de restitution
+│   │   ├── labels.py           # libellés métier des variables du modèle
+│   │   ├── routes.py           # routes /portal : cohorte, fiche, export, pilotage, conformité
+│   │   ├── templates/          # gabarits Jinja2 (rendu serveur, auto-échappement)
+│   │   └── static/             # CSS + amélioration progressive (aucune ressource distante)
+│   └── cli.py                  # 19 commandes : données, BDD, entraînement, scoring, Run, comptes portail
 ├── tests/                      # contrats package/API + non-régression anti-fuite
 ├── docs/                       # fiche modèle, industrialisation, surveillance, menaces
 ├── Dockerfile                  # image de service non-root
@@ -92,9 +101,10 @@ examen/
           |   predict_proba_abandon   |   → proba_abandon + alerte
           +------------+--------------+
                        v
-          +---------------------------+   Tableau de bord référents
-          |  Restitution & pilotage   |   liste priorisée + facteurs (SHAP)
-          |  (décision HUMAINE)       |   audit équité + journalisation
+          +---------------------------+   Portail /portal (decrochage.portal) :
+          |  Restitution & pilotage   |   liste priorisée + facteurs contributifs
+          |  (décision HUMAINE)       |   RBAC 3 rôles, audit de chaque consultation,
+          |                           |   export pseudonymisé vers le SI scolarité
           +------------+--------------+
                        v
           +---------------------------+
@@ -140,6 +150,7 @@ DataFrame brut (SI+LMS)
 | `decrochage.api` | Service HTTP contractuel | Enregistrements JSON bruts | JSON prédictions |
 | `decrochage.cli` | Exploitation batch | CSV / bundle | rapports, prédictions, service |
 | `decrochage.monitoring` | Détection de dérive PSI | référence + courant | rapport JSON |
+| `decrochage.portal` | Restitution aux référents : liste priorisée, explication locale, export SI, pilotage, conformité | Tables Gold/Silver + bundle chargé | Pages HTML, export CSV pseudonymisé, événements d'audit |
 | `notebooks/…` | Restitution certifiante bout-en-bout (C1→C9) | Données + package | Analyses, modèle, figures |
 
 ## Contrats d'entrée / sortie
@@ -151,6 +162,8 @@ DataFrame brut (SI+LMS)
 | Score de risque | DataFrame `{proba_abandon: float∈[0,1], alerte: 0/1}` | `serving.predict_proba_abandon` | Tableau de bord référents | seuil documenté |
 | API de prédiction | JSON `{records: [...]}` | FastAPI `/predict` | SI / tableau de bord | Pydantic + readiness |
 | Rapport de dérive | JSON PSI par variable | `monitoring.build_drift_report` | Data scientist / DPO | seuils watch/alert |
+| Liste de travail référent | HTML `/portal/cohorte` (pseudonymes, rang, probabilité, alerte) | `decrochage.portal` | Référent pédagogique | RBAC + périmètre de filières en SQL |
+| Export vers le SI | CSV à colonnes fermées (`pseudo_id`, `rang`, `proba_abandon`, `alerte`, `filiere`, `batch_id`, `model_version`, `threshold`, `generated_at`) | `decrochage.portal` | SI scolarité (ré-identification) | plafond de lignes, export audité |
 
 ## Stockage et données
 
@@ -168,7 +181,7 @@ DataFrame brut (SI+LMS)
 | Technique | ~5 200 étudiants/an, latence non critique | Scoring batch semestriel, modèle linéaire léger |
 | RGPD | Données scolaires sensibles | Finalité limitée, pseudonymisation HMAC, rétention, audit log, décision humaine, information étudiants |
 | Éco-conception | Sobriété du calcul, mesurée et non affirmée | Coût d'entraînement instrumenté (`ecodesign.py`, CodeCarbon) : le boosting coûte un ordre de grandeur de calcul de plus que la régression logistique (facteur ~10 pour le boosting, ~20 à 30 pour Random Forest selon la charge machine) pour une AUC équivalente ou inférieure. Leviers par impact décroissant : réentraînement **annuel** (et non mensuel), modèle linéaire, machine unique sans orchestrateur, minimisation des variables, scoring par batch semestriel, purge à échéance |
-| Organisationnelle | Adoption équipes | Explicabilité (coefficients, SHAP), score = aide |
+| Organisationnelle | Adoption équipes | Explicabilité (coefficients, SHAP), score = aide ; portail de restitution lisible par un non-technicien, avec facteurs contributifs par étudiant |
 | Économique | Budget d'accompagnement limité | Priorisation par score (top-K) selon capacité tuteurs |
 
 ## Socle technique
@@ -184,6 +197,7 @@ DataFrame brut (SI+LMS)
 | Surveillance | PSI pandas/numpy | Détection de dérive des données |
 | Déploiement | Docker | API locale conteneurisée |
 | Restitution | `jupyter`, `matplotlib`, `seaborn` | Notebook certifiant, visualisations |
+| Portail | `Jinja2` (rendu serveur), `itsdangerous` (cookie signé), `argon2-cffi` (hachage) | Restitution aux référents sans chaîne de build JavaScript ni ressource distante |
 | Qualité | `ruff`, `black`, `pytest`, GitHub Actions | Lint, formatage, tests, CI |
 
 ## Points d'attention
@@ -194,3 +208,12 @@ DataFrame brut (SI+LMS)
 - Le **bundle** embarque le catalogue pour être auto-suffisant à l'inférence.
 - Les performances rapportées valent sur **données synthétiques** ; revalidation
   sur données réelles + A/B test avant tout déploiement.
+- Le **portail est désactivé par défaut** (`DECROCHAGE_PORTAL_ENABLED=false`) et
+  refuse de démarrer sans `DECROCHAGE_PORTAL_SECRET` : un déploiement d'inférence
+  pur n'expose aucune surface web authentifiée.
+- Le portail est en **lecture seule** et ne déclenche aucun scoring : toute
+  prédiction reste rattachée à un lot d'ingestion auditable et purgeable.
+- L'explicabilité servie par le portail est **analytique** (`coefficient × valeur
+  transformée`), donc exacte pour un modèle linéaire, sans dépendance SHAP à
+  l'exécution. Un test vérifie que la somme des contributions et de l'ordonnée à
+  l'origine égale le log-odds du modèle.

@@ -23,6 +23,7 @@ l'usage devient très irrégulier.
 SI/LMS -> Caddy HTTPS -> FastAPI -> bundle MLflow @production
                          |    |
                          |    +-> Postgres Bronze/Silver/Gold
+                         |    +-> /portal (referents) -> export pseudonymise -> SI scolarite
                          +------> /metrics -> Prometheus -> Grafana -> canal equipe
 
 APScheduler (derive, decision de reentrainement) -> heartbeat externe (silence detecte)
@@ -74,6 +75,28 @@ L'API recharge ensuite l'alias via `POST /admin/reload`, protégé par la clé A
 Chaque version enregistrée référence le `run_id` et l'artefact
 `model_bundle/model_bundle.joblib` qui l'a produite. Le serveur MLflow utilise
 un moteur de stockage SQLite isolé de la base métier et est exposé sur le port 5000.
+
+## Portail : impact sur l'exploitation
+
+Le portail est servi par le **même conteneur** que l'API : ni service
+supplémentaire, ni chaîne de build JavaScript, ni ressource distante. L'impact
+sur le coût Run est donc négligeable — pas de ligne supplémentaire au tableau
+ci-dessus. Il ajoute en revanche deux obligations d'exploitation :
+
+- **Un secret de plus à gérer** (`DECROCHAGE_PORTAL_SECRET`), au même régime que
+  le secret de pseudonymisation : coffre géré, rotation documentée. Sa rotation
+  invalide toutes les sessions d'agents en cours, à planifier hors fenêtre de scoring.
+- **Un cycle de vie de comptes** : création, périmètre de filières, révocation
+  (`decrochage portal-user-*`). Le TCO humain inclut désormais cette gestion,
+  ainsi que la revue périodique des habilitations par le DPO.
+
+Caddy reçoit une Content-Security-Policy stricte (`default-src 'self'`), rendue
+nécessaire par le passage de JSON à du HTML. Elle interdit tout style et tout
+script en ligne : un contenu injecté dans une valeur de donnée ne peut pas
+s'exécuter. L'application pose la **même** politique sur chacune de ses réponses
+HTML, de sorte qu'un lancement sans Caddy — une démonstration locale, par
+exemple — ne serve jamais une page dépourvue de politique. Le coût Run est
+inchangé : ce sont des en-têtes, pas un service supplémentaire.
 
 Les requêtes API sont journalisées en JSON avec horodatage UTC, niveau, logger,
 `request_id`, route, statut et durée, sans payload étudiant. Docker limite chaque

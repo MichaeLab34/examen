@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Conformité{% endblock %}
+{% block warning %}{% endblock %}
+
+{% block content %}
+<h1>Conformité et redevabilité</h1>
+<p class="muted">
+  Cette vue ne donne accès à aucune donnée étudiante : ni score individuel, ni fiche,
+  ni export. Elle sert à vérifier les accès, la conservation et la version de modèle
+  en vigueur.
+</p>
+
+<section class="card">
+  <h2>Modèle et surveillance</h2>
+  <dl class="definitions">
+    <dt>Version de modèle observée</dt><dd>{{ model_version or "non renseignée" }}</dd>
+    <dt>Seuil de décision</dt><dd>{{ threshold_label }}</dd>
+    <dt>Dernier statut de dérive</dt>
+    <dd>
+      {% if drift %}
+      {{ drift.status }} — {{ drift.watch_count }} variable(s) sous surveillance,
+      {{ drift.alert_count }} en alerte
+      ({{ drift.created_at.strftime("%d/%m/%Y") if drift.created_at else "date inconnue" }})
+      {% else %}aucun rapport de dérive persisté{% endif %}
+    </dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Lots et échéances de conservation</h2>
+  {% if batches %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th scope="col">Lot</th>
+        <th scope="col">Source</th>
+        <th scope="col">Bronze</th>
+        <th scope="col">Silver</th>
+        <th scope="col">Gold</th>
+        <th scope="col">Créé le</th>
+        <th scope="col">Expire le</th>
+        <th scope="col">Jours restants</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for batch in batches %}
+      <tr {% if batch.days_left(now=now) is not none and batch.days_left(now=now) < 0 %}class="row--expired"{% endif %}>
+        <td><code>{{ batch.short_id }}</code></td>
+        <td>{{ batch.source_name }}</td>
+        <td>{{ batch.rows_bronze }}</td>
+        <td>{{ batch.rows_silver }}</td>
+        <td>{{ batch.rows_gold }}</td>
+        <td>{{ batch.created_at.strftime("%d/%m/%Y") if batch.created_at else "—" }}</td>
+        <td>{{ batch.expires_at.strftime("%d/%m/%Y") if batch.expires_at else "—" }}</td>
+        <td>
+          {% set remaining = batch.days_left(now=now) %}
+          {% if remaining is none %}—
+          {% elif remaining < 0 %}<span class="badge badge--alert">échu, à purger</span>
+          {% else %}{{ remaining }}{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">
+    La purge des lots échus s'exécute par <code>decrochage purge-expired</code> et
+    écrit son propre événement d'audit.
+  </p>
+  {% else %}
+  <p class="muted">Aucun lot d'ingestion enregistré.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Répartition des événements d'audit</h2>
+  {% if action_counts %}
+  <ul class="chips">
+    {% for action, count in action_counts %}
+    <li class="chip">{{ action }} <span class="chip__count">{{ count }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Aucun événement enregistré.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Journal de redevabilité ({{ events|length }} derniers événements)</h2>
+  {% if events %}
+  <table class="data-table data-table--compact">
+    <thead>
+      <tr>
+        <th scope="col">Horodatage</th>
+        <th scope="col">Action</th>
+        <th scope="col">Acteur</th>
+        <th scope="col">Type de cible</th>
+        <th scope="col">Cible</th>
+        <th scope="col">Motif</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in events %}
+      <tr>
+        <td>{{ event.created_at.strftime("%d/%m/%Y %H:%M") if event.created_at else "—" }}</td>
+        <td>{{ event.action }}</td>
+        <td>{{ event.actor }}</td>
+        <td>{{ event.target_type }}</td>
+        <td><code>{{ event.short_target }}</code></td>
+        <td>{{ event.reason }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">
+    Les cibles sont des pseudonymes HMAC tronqués : le journal lui-même ne contient
+    aucun identifiant étudiant en clair.
+  </p>
+  {% else %}
+  <p class="muted">Aucun événement enregistré.</p>
+  {% endif %}
+</section>
+{% endblock %}

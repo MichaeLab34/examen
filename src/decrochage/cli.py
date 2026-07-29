@@ -23,8 +23,11 @@ from .persistence import (
     persist_medallion_layers,
     persist_predictions,
     purge_expired_batches,
+    record_privacy_audit,
     redacted_database_url,
 )
+from .portal.models import ROLES, PortalUser, normalize_scope
+from .portal.security import hash_password
 from .preprocessing import clean_raw
 from .registry import promote_candidate, register_saved_bundle, rollback_production, version_at
 from .scheduler import (
@@ -438,3 +441,166 @@ def serve(
     import uvicorn
 
     uvicorn.run("decrochage.api:app", host=host, port=port, reload=False)
+
+
+# --- Comptes du portail de restitution ------------------------------------- #
+#
+# Les mots de passe ne sont JAMAIS acceptés en argument de ligne de commande :
+# ils seraient écrits dans l'historique du shell et dans la table des processus.
+# La saisie est masquée et confirmée.
+
+PortalDatabaseUrl = Annotated[
+    str | None,
+    typer.Option(
+        "--database-url",
+        help=f"SQLAlchemy database URL. Defaults to ${DATABASE_URL_ENV} or local SQLite.",
+    ),
+]
+
+
+def _portal_scope(filieres: str | None) -> str | None:
+    if not filieres:
+        return None
+    return normalize_scope([part for part in filieres.split(",") if part.strip()])
+
+
+@app.command("portal-user-add")
+def portal_user_add(
+    username: Annotated[str, typer.Argument(help="Information-system username (not an email)")],
+    role: Annotated[str, typer.Option(help=f"One of: {', '.join(ROLES)}")] = "referent",
+    filieres: Annotated[
+        str | None,
+        typer.Option(help="Comma-separated programme scope; omit for an unrestricted scope"),
+    ] = None,
+    display_name: Annotated[
+        str | None, typer.Option(help="Optional display name shown in the header")
+    ] = None,
+    database_url: PortalDatabaseUrl = None,
+) -> None:
+    """Create a portal account with an interactively prompted password."""
+    if role not in ROLES:
+        raise typer.BadParameter(f"role must be one of: {', '.join(ROLES)}")
+    handle = username.strip()
+    if not handle:
+        raise typer.BadParameter("username must not be empty")
+    if "@" in handle:
+        raise typer.BadParameter("username must be an IS handle, not an email address")
+
+    password = typer.prompt("Mot de passe", hide_input=True, confirmation_prompt=True)
+    if len(password) < 12:
+        raise typer.BadParameter("password must be at least 12 characters long")
+
+    Session = make_session_factory(database_url)
+    with Session() as session:
+        existing = session.query(PortalUser).filter(PortalUser.username == handle).one_or_none()
+        if existing is not None:
+            raise typer.BadParameter(f"account already exists: {handle}")
+        user = PortalUser(
+            username=handle,
+            display_name=display_name,
+            role=role,
+            scope_filieres=_portal_scope(filieres),
+            password_hash=hash_password(password),
+            must_change_password=True,
+        )
+        session.add(user)
+        record_privacy_audit(
+            session,
+            action="portal_user_create",
+            actor="cli",
+            target_type="portal_user",
+            target_id=handle,
+            reason="Création d'un compte d'accès au portail de restitution",
+            metadata={"role": role, "scope": user.scope_list() or "global"},
+        )
+        session.commit()
+
+    typer.echo(
+        json.dumps(
+            {
+                "created": handle,
+                "role": role,
+                "scope": _portal_scope(filieres) or "global",
+                "must_change_password": True,
+                "database_url": redacted_database_url(database_url),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+
+
+@app.command("portal-user-list")
+def portal_user_list(
+    database_url: PortalDatabaseUrl = None,
+) -> None:
+    """List portal accounts without exposing any password material."""
+    Session = make_session_factory(database_url)
+    with Session() as session:
+        users = session.query(PortalUser).order_by(PortalUser.username).all()
+        payload = [
+            {
+                "username": user.username,
+                "role": user.role,
+                "scope": user.scope_list() or "global",
+                "active": user.is_active(),
+                "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+            }
+            for user in users
+        ]
+    typer.echo(json.dumps({"users": payload, "count": len(payload)}, indent=2, ensure_ascii=False))
+
+
+@app.command("portal-user-disable")
+def portal_user_disable(
+    username: Annotated[str, typer.Argument(help="Account to disable")],
+    database_url: PortalDatabaseUrl = None,
+) -> None:
+    """Disable an account immediately, keeping it for audit traceability."""
+    Session = make_session_factory(database_url)
+    with Session() as session:
+        user = session.query(PortalUser).filter(PortalUser.username == username).one_or_none()
+        if user is None:
+            raise typer.BadParameter(f"unknown account: {username}")
+        user.disabled_at = datetime.now(timezone.utc)
+        record_privacy_audit(
+            session,
+            action="portal_user_disable",
+            actor="cli",
+            target_type="portal_user",
+            target_id=username,
+            reason="Révocation immédiate d'un accès au portail",
+            metadata={"role": user.role},
+        )
+        session.commit()
+    typer.echo(json.dumps({"disabled": username}, indent=2))
+
+
+@app.command("portal-user-passwd")
+def portal_user_passwd(
+    username: Annotated[str, typer.Argument(help="Account whose password is rotated")],
+    database_url: PortalDatabaseUrl = None,
+) -> None:
+    """Rotate an account password, prompting for the new value."""
+    Session = make_session_factory(database_url)
+    password = typer.prompt("Nouveau mot de passe", hide_input=True, confirmation_prompt=True)
+    if len(password) < 12:
+        raise typer.BadParameter("password must be at least 12 characters long")
+
+    with Session() as session:
+        user = session.query(PortalUser).filter(PortalUser.username == username).one_or_none()
+        if user is None:
+            raise typer.BadParameter(f"unknown account: {username}")
+        user.password_hash = hash_password(password)
+        user.must_change_password = False
+        record_privacy_audit(
+            session,
+            action="portal_user_password_rotated",
+            actor="cli",
+            target_type="portal_user",
+            target_id=username,
+            reason="Rotation du mot de passe d'un compte portail",
+            metadata={},
+        )
+        session.commit()
+    typer.echo(json.dumps({"password_rotated": username}, indent=2))

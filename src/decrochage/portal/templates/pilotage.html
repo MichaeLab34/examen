@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Pilotage de la charge{% endblock %}
+
+{% block content %}
+<h1>Pilotage de la charge d'accompagnement</h1>
+
+<section class="context-bar" aria-label="Contexte du scoring">
+  <span><strong>Lot</strong> {{ context.batch_short or "—" }}</span>
+  <span><strong>Date</strong> {{ context.batch_date or "—" }}</span>
+  <span><strong>Modèle</strong> {{ context.model_version or "non renseigné" }}</span>
+  <span><strong>Seuil en vigueur</strong> {{ context.threshold_label }}</span>
+  <span><strong>Périmètre</strong> {{ identity.scope_label }}</span>
+</section>
+
+<form method="get" action="{{ base_path }}/pilotage" class="filters">
+  <div class="field">
+    <label for="batch_id">Lot d'ingestion</label>
+    <select id="batch_id" name="batch_id">
+      {% for batch in batches %}
+      <option value="{{ batch.batch_id }}" {% if batch.batch_id == batch_id %}selected{% endif %}>
+        {{ batch.short_id }} — {{ batch.created_at.strftime("%d/%m/%Y") if batch.created_at else "date inconnue" }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="seuil">Seuil simulé</label>
+    <input type="number" id="seuil" name="seuil" min="0.01" max="0.99" step="0.01" value="{{ simulated_threshold }}">
+    <p class="field__hint">Simulation uniquement : le seuil du modèle en production n'est jamais modifié ici.</p>
+  </div>
+  <button type="submit" class="button button--primary">Simuler</button>
+</form>
+
+<section class="card">
+  <h2>Volume d'alertes au seuil simulé</h2>
+  <p class="kpi">
+    <strong>{{ simulated_alerts }}</strong> étudiants signalés à un seuil de
+    {{ simulated_threshold }} sur {{ total }} scorés
+    ({{ simulated_ratio_label }}).
+  </p>
+  <p class="muted">
+    Abaisser le seuil augmente le rappel et le nombre de fausses alertes ; le relever
+    fait l'inverse. Le compromis retenu en production privilégie le rappel, un faux
+    négatif étant considéré cinq fois plus coûteux qu'une fausse alerte.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Distribution des probabilités</h2>
+  {% if histogram_bars %}
+  <svg class="histogram" viewBox="0 0 {{ histogram_width }} {{ histogram_height }}"
+       role="img" aria-label="Histogramme de la distribution des probabilités de décrochage">
+    {% for bar in histogram_bars %}
+    <rect class="histogram__bar" x="{{ bar.x }}" y="{{ bar.y }}"
+          width="{{ bar.width }}" height="{{ bar.height }}"></rect>
+    <text class="histogram__label" x="{{ bar.label_x }}" y="{{ histogram_height - 4 }}"
+          text-anchor="middle">{{ bar.label }}</text>
+    {% endfor %}
+  </svg>
+  <table class="data-table data-table--compact">
+    <caption>Effectifs par tranche de probabilité</caption>
+    <thead><tr><th scope="col">Tranche</th><th scope="col">Effectif</th></tr></thead>
+    <tbody>
+      {% for bar in histogram_bars %}
+      <tr><td>{{ bar.range_label }}</td><td>{{ bar.count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Aucune prédiction disponible pour ce lot.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Indicateurs par filière</h2>
+  {% if stats %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th scope="col">Filière</th>
+        <th scope="col">Effectif</th>
+        <th scope="col">Alertes</th>
+        <th scope="col">Taux d'alerte</th>
+        <th scope="col">Probabilité médiane</th>
+        <th scope="col">Décile supérieur</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for stat in stats %}
+      <tr>
+        <td>{{ stat.filiere }}</td>
+        <td>{{ stat.effectif }}</td>
+        <td>{{ stat.alertes }}</td>
+        <td>{{ "%.1f"|format(stat.taux_alerte * 100) }} %</td>
+        <td>{{ "%.2f"|format(stat.proba_mediane) }}</td>
+        <td>{{ "%.2f"|format(stat.proba_decile_sup) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if hidden_groups %}
+  <p class="muted">
+    {{ hidden_groups }} filière(s) de moins de {{ min_group_size }} étudiants ne sont pas
+    publiées séparément : sous cet effectif, un indicateur agrégé désigne des individus.
+    Elles sont regroupées sur la ligne « {{ small_groups_label }} », ou retirées du tableau
+    lorsque ce regroupement reste lui-même sous le seuil.
+  </p>
+  {% endif %}
+  {% else %}
+  <p class="muted">Aucune donnée agrégée pour ce lot.</p>
+  {% endif %}
+  <p class="notice notice--warning">
+    <strong>Précaution d'équité.</strong> Un écart de taux d'alerte entre filières peut
+    refléter un biais indirect du modèle ou de la collecte, et non un écart réel de
+    risque. Tout arbitrage de moyens doit s'appuyer sur l'audit par sous-groupes du
+    notebook, pas sur ce tableau seul.
+  </p>
+</section>
+
+{% if can_export %}
+<p class="actions">
+  <a class="button" href="{{ export_url }}">Exporter la liste vers le SI (CSV)</a>
+</p>
+{% endif %}
+{% endblock %}

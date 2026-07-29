@@ -13,10 +13,12 @@ from uuid import uuid4
 
 import pandas as pd
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi.staticfiles import StaticFiles
 from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.responses import JSONResponse
 
 from .logging_config import configure_json_logger
+from .portal.config import PortalSettings
 from .registry import load_bundle_by_alias
 from .schemas import (
     HealthResponse,
@@ -30,6 +32,11 @@ from .serving import ModelBundle, load_bundle, predict_proba_abandon
 DEFAULT_MODEL_PATH = Path("artifacts/models/model_bundle.joblib")
 REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 AUDIT_LOGGER = configure_json_logger("decrochage.api.audit")
+
+# Paths protected by the application rate limiter. `/portal/login` is included
+# so the portal login form is throttled at the edge of the service as well as by
+# the per-account lockout, which blunts credential stuffing across usernames.
+RATE_LIMITED_PATHS = frozenset({"/predict", "/admin/reload", "/portal/login"})
 
 
 class SlidingWindowRateLimiter:
@@ -157,7 +164,7 @@ def create_app() -> FastAPI:
         client_host = request.client.host if request.client else "unknown"
         response = None
         try:
-            if request.url.path in {"/predict", "/admin/reload"}:
+            if request.url.path in RATE_LIMITED_PATHS:
                 allowed, retry_after = request.app.state.rate_limiter.allow(
                     f"{client_host}:{request.url.path}"
                 )
@@ -255,7 +262,33 @@ def create_app() -> FastAPI:
         include_in_schema=False,
     )
 
+    _mount_portal(app)
+
     return app
+
+
+def _mount_portal(app: FastAPI) -> None:
+    """Mount the restitution portal when the operator opted in.
+
+    Kept out of the default path on purpose: a pure inference deployment
+    (SI/LMS integration) then exposes no authenticated web surface at all. The
+    import is local so the API keeps working even if the portal package is
+    removed from a trimmed image.
+    """
+    settings = PortalSettings.from_env()
+    if not settings.enabled:
+        app.state.portal_enabled = False
+        return
+
+    from .portal import STATIC_DIR, build_portal_router
+
+    app.include_router(build_portal_router(settings))
+    app.mount(
+        "/portal/static",
+        StaticFiles(directory=str(STATIC_DIR)),
+        name="portal-static",
+    )
+    app.state.portal_enabled = True
 
 
 app = create_app()

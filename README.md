@@ -38,6 +38,7 @@ examen/
 │   ├── scheduler.py            # contrôles de dérive et réentraînement planifiés
 │   ├── persistence.py          # persistance SQL + couches Bronze/Silver/Gold
 │   ├── api.py                  # API FastAPI /health /ready /predict
+│   ├── portal/                 # portail de restitution aux référents (/portal)
 │   └── cli.py                  # commandes batch et service
 ├── docs/                       # fiche modèle, industrialisation, surveillance, menaces
 ├── tests/                      # tests unitaires et contrats API/service
@@ -80,12 +81,47 @@ docker compose logs api --tail 20          # journaux JSON corrélés par reques
 uv run ruff check . ; uv run black --check . ; uv run pytest
 ```
 
+## Portail de restitution
+
+Le portail (`/portal`) est le maillon humain de la chaîne : il transforme les
+scores persistés en liste de travail priorisée, explicable et auditée. Il est
+**désactivé par défaut** — un déploiement d'inférence pur n'expose aucune page web.
+
+```powershell
+$env:DECROCHAGE_PORTAL_ENABLED = "true"
+$env:DECROCHAGE_PORTAL_SECRET = "<32 octets hexadécimaux, hors Git>"
+uv run decrochage init-db                 # crée aussi la table portal_user
+uv run decrochage portal-user-add referent01 --role referent --filieres "Informatique,Gestion"
+uv run decrochage serve                   # http://localhost:8000/portal/login
+```
+
+Trois rôles : `referent` (cohorte priorisée, fiche de risque, export),
+`pilote` (indicateurs agrégés, simulation de seuil, export),
+`auditeur` (journal de redevabilité, échéances de conservation — aucun score
+individuel).
+
+Trois garanties structurantes :
+
+- **Aucun identifiant en clair.** Le portail ne manipule que les pseudonymes
+  HMAC et ne détient aucune table de correspondance ; la ré-identification
+  relève du SI scolarité, à partir d'un export à colonnes fermées.
+- **Lecture seule.** Aucun scoring n'est déclenché depuis l'interface : toute
+  prédiction affichée est rattachée à un lot d'ingestion auditable et purgeable.
+- **Explicabilité exacte, pas approchée.** Sur la régression logistique retenue,
+  la contribution d'une variable est `coefficient × valeur transformée` ; un test
+  vérifie que ces contributions et l'ordonnée à l'origine somment exactement au
+  log-odds du modèle. Aucune dépendance SHAP à l'exécution.
+
+Le mot de passe n'est jamais accepté en argument de ligne de commande (saisie
+masquée et confirmée), les empreintes sont Argon2id, et chaque consultation ou
+export écrit un événement dans `privacy_audit_log`.
+
 ## Industrialisation
 
 Le notebook reste le livrable certifiant. Le chemin d'exploitation léger est porté
 par le package : entraînement avec seuil choisi sur validation, bundle joblib,
-CLI, API FastAPI, persistance SQL en architecture médaillon, Dockerfile, CI
-GitHub Actions et rapport de dérive PSI. Le dispositif d'exploitation ajoute le cycle de vie complet :
+CLI, API FastAPI, portail de restitution, persistance SQL en architecture
+médaillon, Dockerfile, CI GitHub Actions et rapport de dérive PSI. Le dispositif d'exploitation ajoute le cycle de vie complet :
 reverse-proxy Caddy/HTTPS, métriques Prometheus, tableau de bord et alertes Grafana,
 ordonnanceur APScheduler avec heartbeat, politique annuelle de réentraînement,
 runs MLflow et promotion/rollback avec validation humaine. L'API ajoute une

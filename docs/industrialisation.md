@@ -37,6 +37,60 @@ opérations en ligne de commande et la surveillance.
   `heartbeat` signale qu'un batch planifié s'est effectivement terminé.
 - `decrochage schedule` démarre le démon APScheduler. Utiliser `--run-once
   monitoring` ou `--run-once retraining` pour une exécution manuelle auditable.
+- `decrochage portal-user-add <identifiant> --role <referent|pilote|auditeur>
+  [--filieres "A,B"]` crée un compte d'accès au portail. Le mot de passe est
+  **demandé en saisie masquée et confirmé** ; il n'est jamais accepté en argument
+  de ligne de commande, pour ne pas se retrouver dans l'historique du shell ni
+  dans la table des processus. `portal-user-list`, `portal-user-disable` et
+  `portal-user-passwd` complètent le cycle de vie ; chaque opération écrit un
+  événement d'audit.
+
+## Portail de restitution
+
+Le portail est monté sous `/portal` dans le même service FastAPI, en rendu
+serveur Jinja2. Aucune chaîne de build JavaScript, aucun conteneur
+supplémentaire, aucune ressource distante — ce qui permet une CSP stricte
+`default-src 'self'`.
+
+| Route | Rôles | Contenu |
+|---|---|---|
+| `GET/POST /portal/login` | anonyme | Formulaire de connexion ; verrouillage après 5 échecs par identifiant |
+| `POST /portal/logout` | authentifié | Déconnexion, jeton anti-CSRF requis |
+| `GET /portal/` | authentifié | Redirection vers la vue d'entrée du rôle |
+| `GET /portal/cohorte` | `referent` | Liste priorisée, filtres, pagination, capacité d'accompagnement |
+| `GET /portal/etudiant/{pseudo}` | `referent` | Fiche de risque : facteurs contributifs, variables observées, évolution entre lots |
+| `GET /portal/export.csv` | `referent`, `pilote` | Export pseudonymisé à colonnes fermées, plafonné |
+| `GET /portal/pilotage` | `referent`, `pilote` | Indicateurs par filière, histogramme, simulation de seuil |
+| `GET /portal/conformite` | `auditeur` | Journal de redevabilité, échéances de conservation, modèle actif |
+| `GET /portal/a-propos` | authentifié | Usage prévu, usages exclus, métriques, variables écartées |
+
+Activation :
+
+```bash
+DECROCHAGE_PORTAL_ENABLED=true
+DECROCHAGE_PORTAL_SECRET=<32 octets hexadécimaux>   # sinon le service refuse de démarrer
+DECROCHAGE_PORTAL_SESSION_HOURS=8
+DECROCHAGE_PORTAL_PAGE_SIZE=50
+DECROCHAGE_PORTAL_EXPORT_MAX_ROWS=1000
+DECROCHAGE_PORTAL_LOGIN_MAX_ATTEMPTS=5
+DECROCHAGE_PORTAL_LOGIN_WINDOW_MINUTES=15
+DECROCHAGE_PORTAL_ALLOW_INSECURE_COOKIE=false
+```
+
+Le cookie de session porte `Secure` **par défaut**, et non « dès que la requête
+arrive en HTTPS » : derrière un reverse proxy, uvicorn ne fait confiance à
+`X-Forwarded-Proto` que depuis `forwarded_allow_ips` (127.0.0.1 par défaut), ce
+qui exclut un conteneur Caddy sur le réseau Compose — déduire l'attribut du
+schéma perçu le désactiverait donc silencieusement en production. La seule façon
+de le retirer est l'opt-out explicite `DECROCHAGE_PORTAL_ALLOW_INSECURE_COOKIE=true`,
+réservé à un accès local en `http://localhost` sans terminaison TLS. Activé
+derrière Caddy, il ferait circuler la session en clair.
+
+Le portail lit `gold_prediction` joint à `silver_student` (pour la filière) et
+n'appelle jamais `/predict` : il n'existe donc pas de prédiction produite hors
+lot d'ingestion, donc hors politique de rétention. La route `/portal/login` est
+ajoutée aux chemins soumis au limiteur de débit du service, en complément du
+verrouillage par compte.
 
 ## Base de données et architecture médaillon
 
@@ -103,6 +157,9 @@ rapports de dérive en aval.
 - `GET /metrics` : métriques Prometheus de disponibilité, d'erreurs et de latence.
 - `POST /admin/reload` : recharge l'alias `production` configuré sans
   redéploiement de code ; cette route exige toujours `DECROCHAGE_API_KEY`.
+- `/portal/*` : présent uniquement quand `DECROCHAGE_PORTAL_ENABLED=true`.
+  Désactivé, ces routes renvoient `404` et le contrat d'inférence est strictement
+  inchangé (vérifié par test).
 - Chaque réponse porte un `X-Request-ID` ; les journaux structurés contiennent la
   route, le statut et la durée, jamais les payloads ni les clés d'API.
 - Les journaux d'exécution sont émis en un objet JSON par ligne sur la sortie

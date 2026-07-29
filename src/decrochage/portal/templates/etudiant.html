@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Fiche de risque{% endblock %}
+
+{% block content %}
+<p class="breadcrumb"><a href="{{ back_url }}">← Retour à la cohorte</a></p>
+
+<h1>Fiche de risque — <code>{{ row.short_pseudo }}…</code></h1>
+
+<section class="context-bar" aria-label="Contexte de la prédiction">
+  <span><strong>Probabilité</strong> {{ row.proba_pct }}</span>
+  <span>{% if row.alerte %}<span class="badge badge--alert">alerte</span>{% else %}pas d'alerte{% endif %}</span>
+  <span><strong>Seuil</strong> {{ threshold_label }}</span>
+  <span><strong>Modèle</strong> {{ row.model_version or "non renseigné" }}</span>
+  <span><strong>Lot</strong> {{ row.batch_id[:8] }}</span>
+  <span><strong>Scoré le</strong> {{ row.created_at.strftime("%d/%m/%Y") if row.created_at else "—" }}</span>
+</section>
+
+{% if explanation %}
+<section class="card">
+  <h2>Facteurs de risque</h2>
+  <div class="factors">
+    <div>
+      <h3>Facteurs aggravants</h3>
+      {% if explanation.risk %}
+      <ol class="factor-list">
+        {% for factor in explanation.risk %}
+        <li>
+          <span class="factor-arrow factor-arrow--up" aria-hidden="true">↑</span>
+          <span class="factor-label">{{ factor.label }}</span>
+          <span class="factor-value">{{ factor.value }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="muted">Aucun facteur aggravant marquant.</p>{% endif %}
+    </div>
+    <div>
+      <h3>Facteurs protecteurs</h3>
+      {% if explanation.protective %}
+      <ol class="factor-list">
+        {% for factor in explanation.protective %}
+        <li>
+          <span class="factor-arrow factor-arrow--down" aria-hidden="true">↓</span>
+          <span class="factor-label">{{ factor.label }}</span>
+          <span class="factor-value">{{ factor.value }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="muted">Aucun facteur protecteur marquant.</p>{% endif %}
+    </div>
+  </div>
+  <p class="notice notice--info">
+    Ces facteurs indiquent un <strong>ordre d'importance et un sens</strong>, non une
+    part de responsabilité : les contributions d'une régression logistique
+    s'additionnent sur l'échelle du logit, pas en probabilité. Le modèle
+    n'établit aucune causalité.
+  </p>
+</section>
+{% else %}
+<section class="card">
+  <h2>Facteurs de risque</h2>
+  <p class="notice notice--info">
+    L'explication détaillée n'est pas disponible : {{ explanation_error }}
+  </p>
+</section>
+{% endif %}
+
+{% if observed %}
+<section class="card">
+  <h2>Variables observées</h2>
+  <p class="muted">
+    Strictement limitées aux variables utilisées par le modèle. Les cibles et les
+    variables écartées du périmètre de scoring ne sont pas restituées.
+  </p>
+  <table class="data-table data-table--compact">
+    <thead><tr><th scope="col">Variable</th><th scope="col">Valeur</th></tr></thead>
+    <tbody>
+      {% for item in observed %}
+      <tr><td>{{ item.label }}</td><td>{{ item.value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+
+{% if history|length > 1 %}
+<section class="card">
+  <h2>Évolution entre lots</h2>
+  <ol class="timeline">
+    {% for point in history %}
+    <li>
+      <span class="timeline__batch">{{ point.batch_id[:8] }}</span>
+      <span class="timeline__date">{{ point.created_at.strftime("%d/%m/%Y") if point.created_at else "—" }}</span>
+      <span class="timeline__proba">{{ point.proba_pct }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+  <p class="muted">{{ trend_label }}</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Motif de consultation</h2>
+  <p class="muted">
+    Le motif est enregistré dans le journal de redevabilité avec votre identifiant.
+    Cette consultation a été journalisée sous le motif ci-dessous.
+  </p>
+  <form method="get" action="{{ request_path }}" class="filters">
+    <input type="hidden" name="batch_id" value="{{ row.batch_id }}">
+    <div class="field">
+      <label for="motif">Motif</label>
+      <select id="motif" name="motif">
+        {% for value, label in motifs %}
+        <option value="{{ value }}" {% if value == motif %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="button">Enregistrer ce motif</button>
+  </form>
+</section>
+{% endblock %}

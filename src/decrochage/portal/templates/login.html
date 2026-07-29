@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Connexion{% endblock %}
+{% block warning %}{% endblock %}
+
+{% block content %}
+<section class="card card--narrow">
+  <h1>Connexion au portail</h1>
+  <p class="muted">
+    Accès réservé aux personnels habilités (référents pédagogiques, pilotage de la
+    réussite étudiante, délégué à la protection des données).
+  </p>
+
+  <form method="post" action="{{ base_path }}/login" class="stack">
+    <div class="field">
+      <label for="username">Identifiant</label>
+      <input type="text" id="username" name="username" autocomplete="username"
+             required autofocus maxlength="80" spellcheck="false">
+      <p class="field__hint">Identifiant du système d'information, pas une adresse de courriel.</p>
+    </div>
+    <div class="field">
+      <label for="password">Mot de passe</label>
+      <input type="password" id="password" name="password"
+             autocomplete="current-password" required maxlength="256">
+    </div>
+    <button type="submit" class="button button--primary">Se connecter</button>
+  </form>
+</section>
+{% endblock %}

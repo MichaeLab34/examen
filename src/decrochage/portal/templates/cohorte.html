@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Cohorte priorisée{% endblock %}
+
+{% block content %}
+<h1>Cohorte priorisée</h1>
+
+<section class="context-bar" aria-label="Contexte du scoring">
+  <span><strong>Lot</strong> {{ context.batch_short or "—" }}</span>
+  <span><strong>Date</strong> {{ context.batch_date or "—" }}</span>
+  <span><strong>Modèle</strong> {{ context.model_version or "non renseigné" }}</span>
+  <span><strong>Seuil</strong> {{ context.threshold_label }}</span>
+  <span><strong>Alertes</strong> {{ page.alert_count }} / {{ page.total }}</span>
+</section>
+
+<form method="get" action="{{ base_path }}/cohorte" class="filters" id="filtres-cohorte">
+  <div class="field">
+    <label for="batch_id">Lot d'ingestion</label>
+    <select id="batch_id" name="batch_id">
+      {% for batch in batches %}
+      <option value="{{ batch.batch_id }}" {% if batch.batch_id == filters.batch_id %}selected{% endif %}>
+        {{ batch.short_id }} — {{ batch.created_at.strftime("%d/%m/%Y") if batch.created_at else "date inconnue" }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="filiere">Filière</label>
+    <select id="filiere" name="filiere">
+      <option value="">{{ identity.scope_label }}</option>
+      {% for filiere in filieres %}
+      <option value="{{ filiere }}" {% if filiere == filters.filiere %}selected{% endif %}>{{ filiere }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field field--inline">
+    <input type="checkbox" id="alertes" name="alertes" value="1" {% if filters.alerts_only %}checked{% endif %}>
+    <label for="alertes">Alertes seules</label>
+  </div>
+  <div class="field">
+    <label for="capacite">Capacité d'accompagnement</label>
+    <input type="number" id="capacite" name="capacite" min="0" max="2000" value="{{ capacite }}">
+    <p class="field__hint">Nombre d'étudiants réellement suivis sur la période.</p>
+  </div>
+  <button type="submit" class="button button--primary">Appliquer</button>
+</form>
+
+{% if capacite and page.alert_count %}
+<p class="notice notice--info">
+  Le top {{ capacite }} couvre <strong>{{ coverage.covered }}</strong> des
+  {{ page.alert_count }} alertes du périmètre, soit {{ coverage.ratio_label }}.
+  Cet indicateur ne mesure pas la performance du modèle : il mesure la part des
+  signalements que la capacité déclarée permet de traiter.
+</p>
+{% endif %}
+
+{% if page.rows %}
+<table class="data-table">
+  <caption>
+    Étudiants pseudonymisés, du risque le plus élevé au plus faible — page
+    {{ page.page }} sur {{ page.page_count }}
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Rang</th>
+      <th scope="col">Pseudonyme</th>
+      <th scope="col">Filière</th>
+      <th scope="col">Probabilité</th>
+      <th scope="col">Alerte</th>
+      <th scope="col">Fiche</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in page.rows %}
+    <tr {% if capacite and row.rank <= capacite %}class="row--in-capacity"{% endif %}>
+      <td>{{ row.rank }}</td>
+      <td><code>{{ row.short_pseudo }}…</code></td>
+      <td>{{ row.filiere or "non renseignée" }}</td>
+      <td>{{ row.proba_pct }}</td>
+      <td>{% if row.alerte %}<span class="badge badge--alert">alerte</span>{% else %}—{% endif %}</td>
+      <td><a href="{{ base_path }}/etudiant/{{ row.pseudo_id }}?batch_id={{ row.batch_id }}">Ouvrir</a></td>
+    </tr>
+    {% if capacite and row.rank == capacite %}
+    <tr class="row--capacity-limit">
+      <td colspan="6">Limite de capacité déclarée ({{ capacite }} étudiants)</td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </tbody>
+</table>
+
+<nav class="pagination" aria-label="Pagination">
+  {% if page.has_previous %}
+  <a href="{{ page_url(page.page - 1) }}">← Page précédente</a>
+  {% endif %}
+  <span>Page {{ page.page }} / {{ page.page_count }}</span>
+  {% if page.has_next %}
+  <a href="{{ page_url(page.page + 1) }}">Page suivante →</a>
+  {% endif %}
+</nav>
+
+<p class="actions">
+  <a class="button" href="{{ export_url }}">Exporter la liste vers le SI (CSV)</a>
+  <span class="muted">Export pseudonymisé, plafonné à {{ export_max_rows }} lignes, journalisé.</span>
+</p>
+{% else %}
+<p class="notice notice--info">
+  Aucune prédiction ne correspond à ce périmètre. Vérifiez le lot sélectionné, ou
+  demandez le rattachement de votre filière si la liste des filières est vide.
+</p>
+{% endif %}
+{% endblock %}

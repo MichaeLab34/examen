@@ -13,9 +13,9 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 | C3 — Préparer les données | Fort | Notebook §§5-7, `preprocessing.py`, `features.py`, tests | Nettoyage déterministe ; imputation dans pipeline ; verrou anti-fuite |
 | C4 — Choisir un modèle | Fort | Notebook §8, courbe ROC/AUC, baseline + familles comparées | Pourquoi AUC ; pourquoi régression logistique plutôt que modèle plus complexe |
 | C5 — Entraîner le modèle | Fort | Notebook §9, `training.py`, `tests/test_training.py` | Train/validation/test ; CV sur train ; seuil choisi sur validation, jamais sur test |
-| C6 — Implémenter la solution | Fort+ | Notebook §10, `serving.py`, `api.py`, `cli.py`, `Dockerfile`, CI | Bundle joblib complet ; contrat d'entrée/sortie ; API/CLI ; secrets hors Git |
-| C7 — Architecture cible & contraintes | Fort+ | Notebook §11, `ARCHITECTURE_PROJET.md`, `compose.yaml` | Ingestion → Bronze/Silver/Gold → scoring → restitution ; contraintes RGPD/coût/adoption |
-| C8 — Mesurer performance & impacts | Fort | Notebook §12, figures, audit équité, régression secondaire | AUC/rappel/précision + coût métier ; expliquer compromis FP/FN |
+| C6 — Implémenter la solution | Fort+ | Notebook §10, `serving.py`, `api.py`, `cli.py`, `portal/`, `Dockerfile`, CI | Bundle joblib complet ; contrat d'entrée/sortie ; API/CLI/portail ; secrets hors Git |
+| C7 — Architecture cible & contraintes | Fort+ | Notebook §11, `ARCHITECTURE_PROJET.md`, `compose.yaml`, `portal/` | Ingestion → Bronze/Silver/Gold → scoring → **restitution implémentée** ; contraintes RGPD/coût/adoption |
+| C8 — Mesurer performance & impacts | Fort | Notebook §12, figures, audit équité, régression secondaire, `/portal/pilotage` | AUC/rappel/précision + coût métier ; expliquer compromis FP/FN ; volume d'alertes vs capacité |
 | C9 — Amélioration continue | Fort+ | Notebook §13, `monitoring.py`, `docs/monitoring_plan.md`, persistance des rapports de dérive | PSI, seuils watch/alert, revue labels, champion/challenger, ré-entraînement |
 
 ## Détail par compétence
@@ -98,7 +98,9 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 - CI GitHub Actions : ruff, black, tests et construction de l'image Docker de service.
 - Portefeuille de preuves : `docs/evidence_portfolio.md` relie RGPD, médaillon, API/CLI, Docker/CI, dérive PSI, fiche modèle / modèle de menaces et matrice C1→C9.
 
-**Phrase orale** : « Le notebook prouve la démarche ; le package prouve que la solution est rejouable hors notebook. »
+- Portail de restitution `/portal` : rendu serveur Jinja2, RBAC 3 rôles, authentification Argon2id, audit nominatif de chaque consultation, export pseudonymisé vers le SI. Désactivé par défaut et refusant de démarrer sans secret de session.
+
+**Phrase orale** : « Le notebook prouve la démarche ; le package prouve que la solution est rejouable hors notebook ; le portail prouve qu'un humain peut réellement s'en servir. »
 
 ### C7 — Architecture cible
 
@@ -107,7 +109,7 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 **Couverture dans examen** :
 - Architecture complète dans `ARCHITECTURE_PROJET.md`.
 - Médaillon : Bronze brut restreint, Silver nettoyé/pseudonymisé, Gold prêt pour la modélisation.
-- Restitution : score priorisé pour référents/tuteurs.
+- Restitution : **implémentée** dans `src/decrochage/portal/` — liste priorisée par référent, fiche de risque avec facteurs contributifs, export vers le SI. Le dernier bloc du diagramme cible n'est plus théorique.
 - Acteurs : scolarité, LMS, réussite étudiante, DSI, DPO, enseignants, data/ML.
 - Contraintes : RGPD, adoption, budget d'accompagnement, éco-conception.
 
@@ -120,7 +122,8 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 **Couverture dans examen** :
 - AUC, average precision, rappel, précision, F1, matrice de confusion.
 - Coût métier : FN plus coûteux qu'un FP ; seuil ≈ 0,30.
-- Explicabilité : permutation importance + SHAP.
+- Explicabilité : permutation importance + SHAP dans le notebook (analyse globale) ; contributions analytiques `coefficient × valeur transformée` servies par le portail (explication locale exacte, sans dépendance à l'exécution, vérifiée par un test d'additivité au log-odds).
+- Charge d'accompagnement : la vue de pilotage relie le seuil au volume d'alertes et à la capacité réelle des tuteurs, ce qui rend le compromis FP/FN manipulable au lieu d'être seulement raconté.
 - Audit équité par sous-groupes sensibles/proxys.
 - Régression secondaire de `moyenne_finale` avec métriques adaptées.
 
@@ -146,7 +149,11 @@ Le livrable officiel reste le notebook unique `notebooks/decrochage_etudiant.ipy
 Ces éléments resteraient disproportionnés ou hors sujet dans le livrable officiel :
 
 - Un orchestrateur distribué : APScheduler couvre le besoin mono-instance ; une plateforme distribuée ne se justifie qu'en cas de montée en charge.
-- Anonymisation avancée k-anonymat/l-diversité/t-proximité : à citer comme culture RGPD, mais pas à appliquer sans besoin de publication de données ligne à ligne.
+- **Ré-identification des étudiants dans le portail** : écartée volontairement. Le portail affiche des pseudonymes et exporte vers le SI, qui seul ré-identifie. L'ergonomie est moins directe ; en échange, une compromission du portail n'expose aucune identité. À réexaminer avec le DPO, avec chiffrement applicatif et probablement une AIPD, si l'usage réel l'exige.
+- **Boucle de retour des référents** (issue du contact → labels réels) : hors périmètre du démonstrateur. C'est pourtant le prolongement le plus utile, puisque la politique de réentraînement annuel suppose des labels de cohorte récents qu'aucun composant ne produit aujourd'hui. À citer comme évolution maîtrisée, pas comme acquis.
+- **Fédération d'identité** (OIDC / Shibboleth-RENATER) : l'authentification locale suffit à la démonstration ; une mise en service réelle passerait par la fédération de l'établissement.
+- **Administration MLOps depuis l'interface** : la promotion de modèle reste sous barrière humaine en CLI (`model-promote --approve`), volontairement hors du portail.
+- Anonymisation avancée l-diversité/t-proximité : à citer comme culture RGPD, mais pas à appliquer sans besoin de publication de données ligne à ligne. Le seul principe effectivement appliqué est un **effectif minimal de cinq** sur la vue de pilotage agrégée (médiane et décile supérieur, jamais le maximum), parce que c'est le seul écran qui publie des statistiques par groupe à un rôle sans accès aux dossiers.
 - Deep learning : non pertinent pour ce tabulaire léger ; risque de dégrader l'explicabilité.
 
 ## Priorités de soutenance
