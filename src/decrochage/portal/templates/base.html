@@ -6,6 +6,9 @@
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}Portail de restitution{% endblock %} — Décrochage L1</title>
   <link rel="stylesheet" href="{{ base_path }}/static/portail.css">
+  <!-- Sans cette déclaration le navigateur réclame /favicon.ico à la racine et
+       journalise un 404 : bruit inutile dans la console d'un poste agent. -->
+  <link rel="icon" href="{{ base_path }}/static/favicon.svg" type="image/svg+xml">
 </head>
 <body>
 <a class="skip-link" href="#contenu">Aller au contenu</a>
