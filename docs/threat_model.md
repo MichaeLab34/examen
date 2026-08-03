@@ -1,40 +1,43 @@
-# Threat Model
+# Modèle de menaces
 
-## Scope
+## Périmètre
 
-The serving surface is a FastAPI service exposing dropout-risk prediction from
-raw student records. Data is sensitive because it contains academic, engagement
-and social-context variables.
+La surface exposée est un service FastAPI qui fournit une prédiction de risque de
+décrochage à partir de dossiers étudiants bruts. Les données sont sensibles parce
+qu'elles contiennent des variables académiques, d'engagement et de contexte
+social.
 
-## Key Threats And Controls
+## Principales menaces et contrôles
 
-| Threat | Risk | Control |
+| Menace | Risque | Contrôle |
 |---|---|---|
-| Spoofing | Unauthorized prediction calls | Optional `DECROCHAGE_API_KEY` with `X-API-Key` |
-| Tampering | Invalid payload changes scoring behavior | Pydantic request validation and feature guard |
-| Repudiation | No trace of scoring operations | Structured request log with `X-Request-ID`, route, status and duration |
-| Information disclosure | Student data leaked through logs | Do not log payloads or API keys |
-| Information disclosure | Direct identifiers stored in restricted Bronze | RBAC, no payload logging, retention purge, DPO-controlled access |
-| Information disclosure | Direct identifiers propagated to analytical layers | HMAC-SHA-256 pseudonymization from Silver onward |
-| Denial of service | Oversized or repeated prediction calls | API schema caps requests at 500 records and applies a configurable per-client rate limit |
-| Elevation of privilege | Container escape impact | Docker image runs as non-root `appuser` |
+| Usurpation (*spoofing*) | Appels de prédiction non autorisés | `DECROCHAGE_API_KEY` optionnelle, via l'en-tête `X-API-Key` |
+| Altération (*tampering*) | Un payload invalide modifie le comportement du scoring | Validation Pydantic des requêtes et garde-fou sur les variables |
+| Répudiation | Aucune trace des opérations de scoring | Journal de requêtes structuré avec `X-Request-ID`, route, statut et durée |
+| Divulgation d'information | Données étudiantes fuitées par les journaux | Ne jamais journaliser les payloads ni les clés d'API |
+| Divulgation d'information | Identifiants directs stockés en Bronze restreint | RBAC, aucune journalisation de payload, purge de rétention, accès contrôlé par le DPO |
+| Divulgation d'information | Identifiants directs propagés aux couches analytiques | Pseudonymisation HMAC-SHA-256 dès Silver |
+| Déni de service | Appels de prédiction surdimensionnés ou répétés | Le schéma d'API plafonne les requêtes à 500 enregistrements et applique une limite de débit configurable par client |
+| Élévation de privilèges | Impact d'une évasion de conteneur | L'image Docker tourne sous l'utilisateur non-root `appuser` |
 
-## RGPD Notes
+## Notes RGPD
 
-- Finality: academic support, not sanction.
-- Minimization: identifiers are excluded from model features, restricted in Bronze and pseudonymized from Silver onward.
-- Retention: batches have `expires_at`; `decrochage purge-expired` removes expired data.
-- Human review: alerts are recommendations for support teams.
-- Accountability: privacy actions are logged in `privacy_audit_log`.
+- Finalité : accompagnement pédagogique, pas sanction.
+- Minimisation : les identifiants sont exclus des variables du modèle, restreints en Bronze et pseudonymisés dès Silver.
+- Rétention : les lots portent un `expires_at` ; `decrochage purge-expired` supprime les données échues.
+- Relecture humaine : les alertes sont des recommandations pour les équipes d'accompagnement.
+- Redevabilité : les actions touchant à la vie privée sont journalisées dans `privacy_audit_log`.
 
-## Production Deployment Gates
+## Conditions à lever avant une mise en production
 
-The application controls are executable in the prototype: API key, request
-correlation without payload logging, per-client rate limiting, schema limits,
-retention and pseudonymisation. A multi-instance deployment must replace the
-in-memory limiter with a shared edge or Redis-backed limiter.
+Les contrôles applicatifs sont exécutables dans le prototype : clé d'API,
+corrélation des requêtes sans journalisation des payloads, limite de débit par
+client, plafonds de schéma, rétention et pseudonymisation. Un déploiement
+multi-instances devra remplacer le limiteur en mémoire par un limiteur partagé :
+soit porté par le frontal, soit adossé à Redis.
 
-Before processing real student data, the DSI must provide managed secret
-storage and encryption at rest with documented key rotation. The DPO must
-validate the processing register and DPIA. These organisational approvals are
-go-live gates and are not represented as completed by this repository.
+Avant tout traitement de données étudiantes réelles, la DSI doit fournir un
+stockage géré des secrets et un chiffrement au repos avec une rotation de clés
+documentée. Le DPO doit valider le registre des traitements et l'AIPD. Ces
+validations organisationnelles sont des conditions de mise en service, et ce
+dépôt ne les présente pas comme acquises.

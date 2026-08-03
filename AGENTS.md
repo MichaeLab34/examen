@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository is a Python 3.13 ML project for early detection of student dropout risk. Reusable package code lives in `src/decrochage/`: `preprocessing.py` cleans raw inputs, `features.py` defines anti-leakage feature engineering, `training.py` trains a bundle, `serving.py` predicts, `persistence.py` stores Bronze/Silver/Gold SQL layers, and `api.py`/`cli.py` expose production paths. The main certification deliverable is `notebooks/decrochage_etudiant.ipynb`. Treat `reports/Enonce_cas_usage.pdf` as the source of truth for certification requirements. Production notes are in `docs/`.
+This repository is a Python 3.13 ML project for early detection of student dropout risk. Reusable package code lives in `src/decrochage/`: `preprocessing.py` cleans raw inputs, `features.py` defines anti-leakage feature engineering, `training.py` trains a bundle, `serving.py` predicts, `persistence.py` stores Bronze/Silver/Gold SQL layers, and `api.py`/`cli.py` expose production paths. The main certification deliverable is `notebooks/decrochage_etudiant.ipynb`. Treat `reports/Enonce_cas_usage.pdf` as the source of truth for certification requirements; it is kept locally but is not versioned, since it belongs to the certification body. Production notes are in `docs/`.
 
 ## Build, Test, and Development Commands
 

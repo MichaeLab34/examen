@@ -10,10 +10,10 @@ l'organisation du code, les flux de données, les modules et les contraintes.
 | Nom du projet | `decrochage` |
 | Type de projet | ML — classification binaire (`abandon`) + régression secondaire (`moyenne_finale`) |
 | Langage principal | `Python` |
-| Runtime | `Python 3.13` |
+| Environnement d'exécution | `Python 3.13` |
 | Gestionnaire de dépendances | `uv` |
 | Point d'entrée principal | Notebook `notebooks/decrochage_etudiant.ipynb` + package `decrochage` |
-| Environnement cible | Batch local / conteneur (scoring hebdomadaire à mi-S1) |
+| Environnement cible | Batch local / conteneur (scoring semestriel à mi-S1, contrôles de dérive hebdomadaires) |
 
 ## Vue d'ensemble
 
@@ -38,23 +38,33 @@ examen/
 │   ├── raw/                    # 3 CSV fournis (immuables, livrables)
 │   └── processed/              # espace transitoire ignoré ; la cible est la BDD
 ├── notebooks/
-│   └── decrochage_etudiant.ipynb   # notebook certifiant (plan imposé 0→15)
+│   ├── decrochage_etudiant.ipynb   # notebook certifiant (plan imposé 0→15)
+│   └── journal_de_bord.ipynb       # journal de bord détaillé, jour par jour
 ├── src/decrochage/            # package réutilisable
 │   ├── __init__.py
 │   ├── preprocessing.py        # parsing (%, virgules, km), dates, normalisation, dédoublonnage
 │   ├── features.py             # périmètre anti-fuite + jointure catalogue + feature engineering
 │   ├── training.py             # entraînement train/validation/test + seuil métier
 │   ├── serving.py              # ModelBundle (joblib) + contrat predict (C6)
-│   ├── monitoring.py           # drift PSI + rapport JSON (C9)
-│   ├── api.py                  # FastAPI : /health, /ready, /predict
-│   └── cli.py                  # check-data, train, predict, drift-report, serve
+│   ├── monitoring.py           # dérive PSI + rapport JSON (C9)
+│   ├── operations.py           # politique de réentraînement + barrière de promotion
+│   ├── registry.py             # alias MLflow candidate/production/archived
+│   ├── tracking.py             # runs MLflow : paramètres, métriques, artefacts
+│   ├── alerting.py             # anti-spam + heartbeat des tâches planifiées
+│   ├── scheduler.py            # contrôles de dérive et réentraînement planifiés
+│   ├── persistence.py          # persistance SQL + couches Bronze/Silver/Gold
+│   ├── ecodesign.py            # mesure des émissions + coût par point de performance
+│   ├── logging_config.py       # journaux JSON structurés
+│   ├── schemas.py              # schémas Pydantic du contrat d'API
+│   ├── api.py                  # FastAPI : /health, /ready, /predict, /metrics, /admin/reload
+│   └── cli.py                  # 15 commandes : données, BDD, entraînement, scoring, Run
 ├── tests/                      # contrats package/API + non-régression anti-fuite
-├── docs/                       # model card, industrialisation, monitoring, menaces
-├── Dockerfile                  # image de serving non-root
+├── docs/                       # fiche modèle, industrialisation, surveillance, menaces
+├── Dockerfile                  # image de service non-root
 ├── artifacts/
 │   ├── models/                 # model_bundle.joblib
 │   └── figures/                # PNG exportés par le notebook
-└── reports/                    # énoncé, support de soutenance
+└── reports/                    # énoncé, slides + conducteur de soutenance
 ```
 
 ## Diagramme d'architecture (ingestion → features → inférence → restitution)
@@ -88,7 +98,7 @@ examen/
           +------------+--------------+
                        v
           +---------------------------+
-          |  Monitoring & MLOps (C9)  |   drift, perf, ré-entraînement
+          |  Surveillance & MLOps (C9)|   dérive, performance, ré-entraînement
           +---------------------------+
 ```
 
@@ -102,7 +112,7 @@ data/raw/*.csv
    → enrich_with_catalogue (jointure filiere)
    → add_engineered_features (taux de rendu, intensité LMS, ...)
    → scoring_feature_columns + assert_no_leakage (verrou anti-fuite)
-   → split stratifié train/validation/test
+   → découpage stratifié train/validation/test
    → Pipeline(impute+encode+scale+LogReg), GridSearchCV (AUC)
    → seuil par minimisation du coût métier sur validation (FN:FP)
    → sérialisation ModelBundle (joblib)
@@ -127,7 +137,7 @@ DataFrame brut (SI+LMS)
 | `decrochage.features` | Périmètre de scoring anti-fuite, jointure catalogue, feature engineering | DataFrame nettoyé | Features + garde-fous |
 | `decrochage.training` | Entraînement industrialisé + choix du seuil sur validation | CSV bruts + catalogue | `ModelBundle`, métriques test |
 | `decrochage.serving` | Bundle sérialisable + contrat de prédiction | Bundle, DataFrame brut | `proba_abandon`, `alerte` |
-| `decrochage.api` | Service HTTP contractuel | JSON records bruts | JSON prédictions |
+| `decrochage.api` | Service HTTP contractuel | Enregistrements JSON bruts | JSON prédictions |
 | `decrochage.cli` | Exploitation batch | CSV / bundle | rapports, prédictions, service |
 | `decrochage.monitoring` | Détection de dérive PSI | référence + courant | rapport JSON |
 | `notebooks/…` | Restitution certifiante bout-en-bout (C1→C9) | Données + package | Analyses, modèle, figures |
@@ -140,7 +150,7 @@ DataFrame brut (SI+LMS)
 | Catalogue formations | CSV (7 colonnes) | Référentiel filières | `features.enrich_with_catalogue` | jointure `filiere` (100 %) |
 | Score de risque | DataFrame `{proba_abandon: float∈[0,1], alerte: 0/1}` | `serving.predict_proba_abandon` | Tableau de bord référents | seuil documenté |
 | API de prédiction | JSON `{records: [...]}` | FastAPI `/predict` | SI / tableau de bord | Pydantic + readiness |
-| Rapport drift | JSON PSI par feature | `monitoring.build_drift_report` | Data scientist / DPO | seuils watch/alert |
+| Rapport de dérive | JSON PSI par variable | `monitoring.build_drift_report` | Data scientist / DPO | seuils watch/alert |
 
 ## Stockage et données
 
@@ -155,23 +165,23 @@ DataFrame brut (SI+LMS)
 
 | Type | Contrainte | Réponse |
 |---|---|---|
-| Technique | ~5 200 étudiants/an, latence non critique | Batch hebdomadaire, modèle linéaire léger |
+| Technique | ~5 200 étudiants/an, latence non critique | Scoring batch semestriel, modèle linéaire léger |
 | RGPD | Données scolaires sensibles | Finalité limitée, pseudonymisation HMAC, rétention, audit log, décision humaine, information étudiants |
-| Éco-conception | Sobriété | Régression logistique (coût de calcul négligeable) |
+| Éco-conception | Sobriété du calcul, mesurée et non affirmée | Coût d'entraînement instrumenté (`ecodesign.py`, CodeCarbon) : le boosting coûte un ordre de grandeur de calcul de plus que la régression logistique (facteur ~10 pour le boosting, ~20 à 30 pour Random Forest selon la charge machine) pour une AUC équivalente ou inférieure. Leviers par impact décroissant : réentraînement **annuel** (et non mensuel), modèle linéaire, machine unique sans orchestrateur, minimisation des variables, scoring par batch semestriel, purge à échéance |
 | Organisationnelle | Adoption équipes | Explicabilité (coefficients, SHAP), score = aide |
 | Économique | Budget d'accompagnement limité | Priorisation par score (top-K) selon capacité tuteurs |
 
-## Stack
+## Socle technique
 
 | Besoin | Outil | Rôle |
 |---|---|---|
-| Environnement / dépendances | `uv` | Lockfile, exécution, packaging |
-| Packaging | `pyproject.toml` + layout `src/` | Package `decrochage` installable |
+| Environnement / dépendances | `uv` | Verrouillage des versions, exécution, packaging |
+| Packaging | `pyproject.toml` + organisation `src/` | Package `decrochage` installable |
 | Data / ML | `pandas`, `numpy`, `scikit-learn`, `xgboost` | Préparation, modèles, métriques |
 | Explicabilité | `shap`, `permutation_importance` | Facteurs de risque |
 | Sérialisation | `joblib` | Bundle modèle |
 | API / CLI | `FastAPI`, `Typer`, `Pydantic` | Exploitation hors notebook |
-| Monitoring | PSI pandas/numpy | Détection dérive données |
+| Surveillance | PSI pandas/numpy | Détection de dérive des données |
 | Déploiement | Docker | API locale conteneurisée |
 | Restitution | `jupyter`, `matplotlib`, `seaborn` | Notebook certifiant, visualisations |
 | Qualité | `ruff`, `black`, `pytest`, GitHub Actions | Lint, formatage, tests, CI |

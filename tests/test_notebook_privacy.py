@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def test_notebook_outputs_do_not_expose_clear_student_ids() -> None:
-    notebook = json.loads(Path("notebooks/decrochage_etudiant.ipynb").read_text())
+    notebook = json.loads(Path("notebooks/decrochage_etudiant.ipynb").read_text(encoding="utf-8"))
     outputs_text = json.dumps(
         [cell.get("outputs", []) for cell in notebook["cells"]],
         ensure_ascii=False,
@@ -14,7 +14,7 @@ def test_notebook_outputs_do_not_expose_clear_student_ids() -> None:
 
 
 def test_notebook_models_use_gold_dataset_as_source() -> None:
-    notebook = json.loads(Path("notebooks/decrochage_etudiant.ipynb").read_text())
+    notebook = json.loads(Path("notebooks/decrochage_etudiant.ipynb").read_text(encoding="utf-8"))
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert "gold_dataset, feature_cols = T.build_gold_dataset(" in source
@@ -34,7 +34,7 @@ def test_notebook_models_use_gold_dataset_as_source() -> None:
 
 
 def test_notebook_does_not_preview_or_score_from_raw_students() -> None:
-    notebook = json.loads(Path("notebooks/decrochage_etudiant.ipynb").read_text())
+    notebook = json.loads(Path("notebooks/decrochage_etudiant.ipynb").read_text(encoding="utf-8"))
     source = "\n".join("".join(cell.get("source", [])) for cell in notebook["cells"])
 
     assert "df_raw" not in source

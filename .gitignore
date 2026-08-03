@@ -31,9 +31,23 @@ data/processed/*.csv
 reports/predictions.csv
 reports/drift_report.json
 
+# Playwright CLI (snapshots, logs, artefacts temporaires de démo)
+.playwright-cli/
+
+# Démo Docker — à personnaliser avant versionnement
+docs/qa_docker_demo_prompt.md
+reports/screenshots/docker/qa-docker-demo.webm
+
+# Énoncé du cas d'usage : propriété de l'organisme de certification,
+# conservé en local mais non redistribué sur le dépôt public
+reports/Enonce_cas_usage.pdf
+
 # OS / IDE
 .DS_Store
 ~$*.pptx
 .vscode/
 .idea/
 .claude/
+
+# Mesures d'eco-conception (CodeCarbon) : dependantes de la machine
+artifacts/ecodesign/

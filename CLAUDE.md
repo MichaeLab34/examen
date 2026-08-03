@@ -20,7 +20,7 @@ Ne jamais dupliquer dans le notebook une logique qui doit vivre dans le package.
 - `ARCHITECTURE_PROJET.md` — architecture C7 (diagrammes, contrats I/O, modules, contraintes RGPD).
 - `README.md` — vue d'ensemble et points méthodologiques.
 - `docs/` — model card, industrialisation, monitoring, threat model, RGPD accountability.
-- `reports/Enonce_cas_usage.pdf` — **source de vérité** des exigences de certification.
+- `reports/Enonce_cas_usage.pdf` — **source de vérité** des exigences de certification. Présent en local mais **non versionné** : il appartient à l'organisme de certification et n'est pas redistribué sur le dépôt public.
 
 ## Commandes
 

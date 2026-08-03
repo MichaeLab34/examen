@@ -2,11 +2,20 @@
 
 ## Décision en une phrase
 
-Pour environ 5 200 étudiants par cohorte et un scoring surtout batch à mi-S1,
-la cible proportionnée est un **VPS européen conteneurisé**, protégé par Caddy,
-avec Postgres, Prometheus/Grafana et un registre MLflow local. Kubernetes serait
-un surdimensionnement ; le serverless sera réévalué si l'usage devient très
-irrégulier ou si l'université dispose déjà d'une plateforme managée.
+Pour environ 5 200 étudiants par cohorte et un scoring surtout batch à mi-S1, la
+cible proportionnée est une **machine unique conteneurisée**, protégée par Caddy,
+avec Postgres, Prometheus/Grafana et un registre MLflow local.
+
+**Option privilégiée : le serveur qui héberge déjà le LMS.** Les données
+d'engagement en proviennent ; les traiter sur place évite tout transfert hors du
+système d'information de l'université et tout sous-traitant supplémentaire au sens
+du RGPD, sans coût d'hébergement additionnel. Condition : cloisonnement en
+conteneur avec ressources plafonnées, pour qu'un entraînement ne dégrade jamais le
+LMS en période de partiels.
+
+**Option de repli : un VPS européen conteneurisé**, si la DSI préfère isoler le
+service. Kubernetes serait un surdimensionnement ; le serverless sera réévalué si
+l'usage devient très irrégulier.
 
 ## Architecture cible
 
@@ -16,12 +25,12 @@ SI/LMS -> Caddy HTTPS -> FastAPI -> bundle MLflow @production
                          |    +-> Postgres Bronze/Silver/Gold
                          +------> /metrics -> Prometheus -> Grafana -> canal equipe
 
-APScheduler (drift, decision de reentrainement) -> heartbeat externe (silence detecte)
-Drift/performance/labels -> candidat -> gate rappel/AUC/equite -> validation humaine
+APScheduler (derive, decision de reentrainement) -> heartbeat externe (silence detecte)
+Derive/performance/labels -> candidat -> barriere rappel/AUC/equite -> validation humaine
                                                        |-> promotion ou rollback
 ```
 
-Le VPS garde le traitement et les données sous le contrôle de la DSI. Les
+Dans les deux cas, le traitement et les données restent sous le contrôle de la DSI. Les
 conteneurs préservent la portabilité : changer d'hébergeur ne demande pas de
 réécrire le service. Caddy fournit le reverse-proxy et renouvelle automatiquement
 les certificats HTTPS avec un vrai nom de domaine.
@@ -33,7 +42,8 @@ pas des devis fournisseurs.
 
 | Option | Ordre de grandeur mensuel | Décision |
 |---|---:|---|
-| VPS production + sauvegarde + domaine | 10-20 EUR | Retenu pour le pilote |
+| Serveur LMS existant (conteneur cloisonné) | 0 EUR | **Privilégié** : données dans le SI |
+| VPS production + sauvegarde + domaine | 10-20 EUR | Repli si isolation souhaitée |
 | Petit environnement de test séparé | +5-10 EUR | Recommandé avant production |
 | Serverless + base managée | 20-80 EUR | À revoir si trafic très intermittent |
 | Kubernetes managé | 60-150 EUR avant services utiles | Écarté à cette échelle |
@@ -48,10 +58,11 @@ en danger un flux temps réel, car le scoring peut être rejoué.
 La fréquence de réentraînement suit la disponibilité réelle des résultats de
 cohorte. La politique livrée combine :
 
-- contrôle drift/qualité à chaque batch ;
-- investigation immédiate si PSI atteint `alert` ;
-- entraînement annuel quand les nouvelles issues sont disponibles ;
-- entraînement anticipé uniquement si dérive/performance et labels frais ;
+- contrôle dérive/qualité à chaque batch ;
+- enquête immédiate si le PSI atteint `alert` ;
+- entraînement annuel quand les résultats de cohorte sont disponibles ;
+- entraînement anticipé uniquement si dérive ou performance le justifient, et
+  seulement avec des labels récents ;
 - promotion semi-automatique après non-régression du rappel, AUC >= 0,85,
   écart de rappel entre sous-groupes <= 10 points et validation humaine.
 
@@ -62,7 +73,7 @@ métriques et bundle en artefact dans l'expérience `decrochage-l1-training`.
 L'API recharge ensuite l'alias via `POST /admin/reload`, protégé par la clé API.
 Chaque version enregistrée référence le `run_id` et l'artefact
 `model_bundle/model_bundle.joblib` qui l'a produite. Le serveur MLflow utilise
-un backend SQLite isolé de la base métier et est exposé sur le port 5000.
+un moteur de stockage SQLite isolé de la base métier et est exposé sur le port 5000.
 
 Les requêtes API sont journalisées en JSON avec horodatage UTC, niveau, logger,
 `request_id`, route, statut et durée, sans payload étudiant. Docker limite chaque
@@ -70,7 +81,7 @@ journal à 10 Mo et conserve cinq fichiers afin de borner l'espace disque.
 
 ## Alertes et silence
 
-Le service expose `/metrics`. Le dashboard Grafana provisionné présente la
+Le service expose `/metrics`. Le tableau de bord Grafana provisionné présente la
 disponibilité, le débit, les statuts HTTP et la latence p95. Grafana attend cinq
 minutes avant d'alerter sur l'indisponibilité ou un taux de 5xx élevé, ce qui
 limite la fatigue d'alerte.
