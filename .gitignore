@@ -31,6 +31,9 @@ data/processed/*.csv
 reports/predictions.csv
 reports/drift_report.json
 
+# Certificats TLS locaux (générés par mkcert, contiennent des clés privées)
+caddy-certs/
+
 # Playwright CLI (snapshots, logs, artefacts temporaires de démo)
 .playwright-cli/
 
