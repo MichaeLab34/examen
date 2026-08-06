@@ -2,6 +2,8 @@
     encode zstd gzip
     reverse_proxy api:8000
 
+    tls /etc/caddy/certs/localhost.crt /etc/caddy/certs/localhost.key
+
     header {
         # `defer` applique ces en-têtes APRÈS la réponse de l'application, si
         # bien qu'ils la remplacent au lieu de s'y ajouter. Sans lui, le portail
