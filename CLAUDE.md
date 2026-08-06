@@ -44,7 +44,9 @@ uv run decrochage train <students.csv> <catalogue.csv>            # → artifact
 uv run decrochage predict <bundle> <input.csv> [--persist-db --batch-id <id>]
 uv run decrochage drift-report <reference.csv> <current.csv> [--persist-db --batch-id <id>]
 uv run decrochage purge-expired           # applique la rétention RGPD
-uv run decrochage serve                   # API FastAPI (uvicorn)
+uv run decrochage serve                   # API FastAPI (uvicorn) + portail si activé
+uv run decrochage portal-user-add <identifiant> --role referent --filieres "Informatique"
+uv run decrochage portal-user-list | portal-user-disable <id> | portal-user-passwd <id>
 ```
 
 La CI GitHub Actions (`.github/workflows/ci.yml`) rejoue `ruff` + `black --check` + `pytest` sur chaque push/PR.
@@ -70,6 +72,21 @@ Colonnes exclues et pourquoi (constantes dans `features.py`) :
 
 Le nettoyage `preprocessing.clean_raw` est **partagé entraînement/inférence** (parsing FR : virgule décimale, `%`, `km` ; dates multi-formats ; harmonisation catégorielle). Toute nouvelle règle de nettoyage doit y passer, jamais dans le notebook seul.
 
+## Portail de restitution (`portal/`)
+
+`src/decrochage/portal/` est le **bloc « Restitution & pilotage » du diagramme C7**, longtemps documenté et non implémenté. Router FastAPI monté sous `/portal` dans le **même** service, rendu serveur Jinja2, **aucun build JavaScript, aucune ressource distante** (CSP `default-src 'self'`).
+
+Quatre invariants à ne jamais casser :
+
+1. **Désactivé par défaut** (`DECROCHAGE_PORTAL_ENABLED=false`) et **refus de démarrer** sans `DECROCHAGE_PORTAL_SECRET`. Un déploiement d'inférence pur n'expose aucune surface web.
+2. **Lecture seule.** Le portail lit `gold_prediction` joint à `silver_student` (pour la filière) ; il n'appelle jamais `/predict`, donc aucune prédiction n'échappe à un lot d'ingestion auditable et purgeable.
+3. **Zéro identifiant en clair.** Pseudonymes HMAC uniquement, aucune table de correspondance, aucun accès Bronze. `repository.scoring_payload` filtre `payload_json["input"]` par **liste blanche `bundle.feature_cols`** — ce payload contient l'enregistrement d'entrée complet, dont `moyenne_finale` (cible, fuite) : ne jamais le rendre tel quel dans un gabarit.
+4. **Périmètre en SQL, jamais dans le gabarit.** Scope restreint → INNER JOIN sur `silver_student.filiere` (**fail-closed** : pas de ligne Silver ⇒ invisible) ; scope global → LEFT JOIN. Hors périmètre ⇒ **404**, jamais 403, pour qu'une frontière ne confirme pas l'existence d'un dossier. Un rôle non habilité sur une route ⇒ 403.
+
+Explicabilité (`serving.explain_prediction`) : contribution = `coefficient × valeur transformée` sur le `Pipeline([("pre", ColumnTransformer), ("clf", LogisticRegression)])`. **Exacte** pour un modèle linéaire, pas de SHAP à l'exécution. `tests/test_explain.py` vérifie que `intercept + Σ contributions == pipeline.decision_function(...)` — si cet invariant tombe, la fiche affiche des nombres qui ne décrivent plus la décision. Les contributions s'additionnent sur le **log-odds**, jamais en probabilité : l'interface affiche un ordre et un sens, jamais un pourcentage de responsabilité.
+
+Comptes (`portal_user`) : ce sont des **agents**, pas des étudiants. Identifiant SI (jamais un courriel), Argon2id, `disabled_at` pour révoquer sans supprimer. Le cookie de session ne porte que le `username` ; rôle et périmètre sont **relus en base à chaque requête** → révocation immédiate. Mot de passe **uniquement** en saisie masquée via la CLI, jamais en argument.
+
 ## Persistance médaillon & RGPD (`persistence.py`)
 
 - **Bronze** = brut restreint (payload JSON intégral, PII) → à restreindre/auditer/purger. **Silver/Gold** = identifiants directs pseudonymisés par **HMAC-SHA-256** dès Silver.
@@ -78,6 +95,8 @@ Le nettoyage `preprocessing.clean_raw` est **partagé entraînement/inférence**
 - Défaut SQLite (`artifacts/decrochage.db`) pour rester exécutable sans infra ; `DECROCHAGE_DATABASE_URL` vise Postgres/autre (voir `compose.yaml`). Les moteurs sont mis en cache par URL.
 
 ## Tests fragiles à connaître
+
+`tests/test_portal_privacy.py` **assert sur le code source des gabarits** : absence de `|safe`, de `payload_json`, de `style="`, de `<script>` sans `src=`, et absence de motif `ETU-\d{5}` / `DOS-\d{4}` dans les réponses HTTP rendues. Renommer une section d'un gabarit (`"Variables observées"`) ou y introduire un style en ligne casse ces tests — c'est voulu.
 
 `tests/test_notebook_privacy.py` **assert sur des chaînes exactes du code source du notebook** (ex. `"X = gold_dataset[feature_cols].copy()"`, `"serving.predict_from_gold_dataset(modele_charge, X_demo)"`, absence de `df_raw`/`predict_proba_abandon(modele_charge`, absence de motif `ETU-\d{5}` dans les *outputs*). Ces tests garantissent que le notebook consomme le Gold pseudonymisé et n'expose aucun identifiant en clair. **Modifier la structure des cellules du notebook casse ces tests** — les mettre à jour de concert.
 

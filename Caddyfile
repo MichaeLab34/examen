@@ -3,9 +3,22 @@
     reverse_proxy api:8000
 
     header {
+        # `defer` applique ces en-têtes APRÈS la réponse de l'application, si
+        # bien qu'ils la remplacent au lieu de s'y ajouter. Sans lui, le portail
+        # — qui pose déjà les mêmes en-têtes pour ne pas dépendre d'un proxy —
+        # produirait deux CSP : le navigateur applique alors leur intersection,
+        # et la moindre divergence future casserait la page sans message clair.
+        defer
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "no-referrer"
+        # Le portail sert du HTML : la CSP devient nécessaire. Tout est servi en
+        # propre ('self') — aucune ressource distante, aucun style ni script en
+        # ligne, ce qui bloque l'exécution d'un contenu injecté dans une valeur
+        # de donnée.
+        Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'"
+        # Le portail ne doit jamais être indexé ni mis en cache par un intermédiaire.
+        X-Robots-Tag "noindex, nofollow"
     }
 }

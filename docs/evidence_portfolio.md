@@ -43,6 +43,8 @@ Ce document relie les ajouts demandés aux preuves concrètes du dépôt. Il com
 - `train` : entraînement, validation, seuil métier, sérialisation et run MLflow.
 - `predict` : scoring batch avec sortie CSV et persistance optionnelle.
 - `init-db`, `medallion-load`, `purge-expired` : cycle BDD/RGPD.
+- `portal-user-add`, `portal-user-list`, `portal-user-disable`, `portal-user-passwd` :
+  cycle de vie des comptes du portail, mot de passe en saisie masquée uniquement.
 - `drift-report` : rapport PSI.
 - `model-register`, `model-promote`, `model-rollback` : cycle de vie contrôlé.
 - `schedule` : contrôles planifiés ou exécution ponctuelle vérifiable.
@@ -177,7 +179,54 @@ Docker en fonctionnement et sont documentés par des captures Playwright de l'ex
 - `docs/threat_model.md`
 - `docs/rgpd_accountability.md`
 
-## 9. Matrice C1 → C9
+## 9. Portail de restitution aux référents
+
+**Objectif examen** : fermer le dernier bloc du diagramme d'architecture C7. Tant
+que la restitution n'existait pas, l'affirmation « le score propose, l'équipe
+pédagogique décide » restait une intention : aucun humain n'avait matériellement
+les moyens de décider.
+
+**Implémentation** :
+- `src/decrochage/portal/` : router FastAPI monté sous `/portal`, rendu serveur
+  Jinja2, aucune chaîne de build JavaScript, aucune ressource distante.
+- Trois rôles : `referent` (cohorte priorisée, fiche de risque, export),
+  `pilote` (agrégats, simulation de seuil), `auditeur` (redevabilité, conservation).
+- Authentification Argon2id, cookie de session signé, jeton anti-CSRF,
+  verrouillage après cinq échecs, `/portal/login` ajoutée aux routes limitées.
+- Périmètre de filières appliqué **dans la requête SQL** ; hors périmètre → `404`
+  et non `403`, pour qu'une frontière ne confirme pas l'existence d'un dossier.
+- Explicabilité locale **analytique** : `serving.explain_prediction` décompose le
+  log-odds en `coefficient × valeur transformée`. Exact pour un modèle linéaire,
+  sans dépendance SHAP à l'exécution.
+- Restitution en liste blanche sur `bundle.feature_cols` : `gold_prediction.payload_json`
+  contient l'enregistrement d'entrée complet, dont `moyenne_finale` (cible) — rien
+  de tout cela ne peut atteindre une page.
+- Export CSV pseudonymisé à colonnes fermées, plafonné, avec en-tête de finalité.
+- `privacy_audit_log` alimenté à chaque consultation avec l'identifiant de l'agent
+  et un motif choisi dans une liste fermée.
+- Désactivé par défaut ; refuse de démarrer sans `DECROCHAGE_PORTAL_SECRET`.
+
+**Preuves** :
+- `src/decrochage/portal/` (config, models, security, repository, labels, routes, gabarits)
+- `src/decrochage/serving.py::explain_prediction`
+- `tests/test_explain.py::test_contributions_sum_to_the_model_log_odds` — l'invariant
+  d'exactitude de l'explication
+- `tests/test_portal_auth.py` — matrice de rôles route par route, compte révoqué
+  malgré un cookie valide, verrouillage, redirection ouverte bloquée
+- `tests/test_portal_privacy.py` — aucun identifiant en clair dans aucune page,
+  aucun rendu du payload brut, colonnes d'export exactes, audit pseudonymisé
+- `tests/test_portal_views.py` — tri, isolation de périmètre, IDOR en `404`,
+  réversibilité complète quand le portail est désactivé
+- `Caddyfile` (CSP stricte), `.env.example`, `compose.yaml`
+- `docs/threat_model.md` (extension STRIDE), `docs/rgpd_accountability.md`
+  (finalité, comptes d'agents, justification du refus de ré-identifier)
+
+**Décision à défendre** : le portail n'affiche **aucun nom**. Il travaille sur
+pseudonymes et exporte vers le SI, qui seul ré-identifie. L'ergonomie est moins
+directe ; en échange, une compromission du portail n'expose aucune identité
+étudiante.
+
+## 10. Matrice C1 → C9
 
 **Objectif examen** : rendre la couverture des compétences explicite pour ne pas laisser le jury deviner.
 
@@ -200,5 +249,6 @@ En soutenance, ne pas présenter ces ajouts comme une usine technique. Les prés
 4. Docker / CI : reproduire et vérifier.
 5. MLflow et ordonnanceur : tracer les expériences et produire des candidats contrôlés.
 6. Dérive PSI et Grafana : surveiller les données et le service.
-7. Fiche modèle et modèle de menaces : documenter usage, limites et risques.
-8. Matrice C1 → C9 : prouver la conformité au référentiel.
+7. Portail de restitution : rendre la décision humaine réellement possible.
+8. Fiche modèle et modèle de menaces : documenter usage, limites et risques.
+9. Matrice C1 → C9 : prouver la conformité au référentiel.

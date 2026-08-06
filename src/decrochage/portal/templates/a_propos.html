@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}À propos du modèle{% endblock %}
+
+{% block content %}
+<h1>À propos du modèle</h1>
+
+<section class="card">
+  <h2>Usage prévu</h2>
+  <p>
+    Estimer, à mi-parcours du premier semestre de L1, la probabilité qu'un étudiant
+    interrompe sa formation, afin de <strong>prioriser un accompagnement humain</strong>.
+  </p>
+  <h3>Usages exclus</h3>
+  <ul>
+    <li>Toute décision automatisée : sélection, sanction, exclusion, refus de dispositif.</li>
+    <li>Toute communication directe à l'étudiant fondée sur le score seul.</li>
+    <li>Toute évaluation des personnels ou des filières.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Performance mesurée</h2>
+  {% if metrics %}
+  <table class="data-table data-table--compact">
+    <thead><tr><th scope="col">Indicateur</th><th scope="col">Valeur</th></tr></thead>
+    <tbody>
+      {% for item in metrics %}
+      <tr><td>{{ item.label }}</td><td>{{ item.value }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Aucune métrique n'est embarquée dans le modèle actuellement chargé.</p>
+  {% endif %}
+  <p class="notice notice--warning">
+    <strong>Limite majeure.</strong> Ces performances sont établies sur des
+    <strong>données synthétiques</strong>. Une revalidation sur données réelles et un
+    test A/B sont nécessaires avant tout déploiement : une bonne AUC ne démontre aucun
+    gain d'accompagnement.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Compromis de décision</h2>
+  <p>
+    Le seuil n'est pas fixé à 0,50 : il est choisi sur le jeu de validation en
+    minimisant un coût métier où un <strong>faux négatif compte 5 fois</strong> plus
+    qu'une fausse alerte. Conséquence assumée : la précision est plus faible, on accepte
+    des alertes en trop pour éviter de manquer un étudiant réellement en difficulté.
+  </p>
+  <dl class="definitions">
+    <dt>Seuil en vigueur</dt><dd>{{ threshold_label }}</dd>
+    <dt>Version du modèle</dt><dd>{{ model_version or "non renseignée" }}</dd>
+    <dt>Nombre de variables explicatives</dt><dd>{{ feature_count }}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Variables volontairement écartées</h2>
+  <p class="muted">
+    Le périmètre de scoring est verrouillé dans le code et vérifié par un test de
+    non-régression. Ces exclusions sont des décisions méthodologiques, pas des oublis.
+  </p>
+  <dl class="definitions">
+    {% for group in excluded_groups %}
+    <dt>{{ group.title }}</dt>
+    <dd>
+      <code>{{ group.columns }}</code>
+      <p class="muted">{{ group.reason }}</p>
+    </dd>
+    {% endfor %}
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Documentation de référence</h2>
+  <ul>
+    <li><code>docs/model_card.md</code> — fiche modèle complète</li>
+    <li><code>docs/rgpd_accountability.md</code> — redevabilité RGPD</li>
+    <li><code>docs/monitoring_plan.md</code> — surveillance et dérive</li>
+    <li><code>docs/threat_model.md</code> — modèle de menaces</li>
+  </ul>
+</section>
+{% endblock %}

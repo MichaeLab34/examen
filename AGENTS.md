@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This repository is a Python 3.13 ML project for early detection of student dropout risk. Reusable package code lives in `src/decrochage/`: `preprocessing.py` cleans raw inputs, `features.py` defines anti-leakage feature engineering, `training.py` trains a bundle, `serving.py` predicts, `persistence.py` stores Bronze/Silver/Gold SQL layers, and `api.py`/`cli.py` expose production paths. The main certification deliverable is `notebooks/decrochage_etudiant.ipynb`. Treat `reports/Enonce_cas_usage.pdf` as the source of truth for certification requirements; it is kept locally but is not versioned, since it belongs to the certification body. Production notes are in `docs/`.
+This repository is a Python 3.13 ML project for early detection of student dropout risk. Reusable package code lives in `src/decrochage/`: `preprocessing.py` cleans raw inputs, `features.py` defines anti-leakage feature engineering, `training.py` trains a bundle, `serving.py` predicts, `persistence.py` stores Bronze/Silver/Gold SQL layers, `api.py`/`cli.py` expose production paths, and `portal/` serves the read-only restitution portal for pedagogical referents. The main certification deliverable is `notebooks/decrochage_etudiant.ipynb`. Treat `reports/Enonce_cas_usage.pdf` as the source of truth for certification requirements; it is kept locally but is not versioned, since it belongs to the certification body. Production notes are in `docs/`.
 
 ## Build, Test, and Development Commands
 
@@ -15,6 +15,9 @@ This repository is a Python 3.13 ML project for early detection of student dropo
 - `uv run decrochage purge-expired` applies the RGPD retention policy to expired database batches.
 - `uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv` trains `artifacts/models/model_bundle.joblib`.
 - `uv run decrochage serve` starts the FastAPI service.
+- `uv run decrochage portal-user-add <username> --role referent --filieres "Informatique"` creates a portal account. The password is prompted with hidden input and confirmed; never pass it as an argument.
+- `uv run decrochage portal-user-list`, `portal-user-disable <username>`, `portal-user-passwd <username>` complete the account lifecycle.
+- The portal is mounted at `/portal` only when `DECROCHAGE_PORTAL_ENABLED=true`, and the service refuses to start if `DECROCHAGE_PORTAL_SECRET` is missing.
 - `uv run pytest` runs automated tests.
 - `uv run ruff check .` runs lint checks.
 - `uv run black --check .` verifies formatting.
@@ -26,7 +29,7 @@ Use Black formatting with 100-character lines. Ruff is configured with the same 
 
 ## Testing Guidelines
 
-Tests live in `tests/` and use `pytest`. Prefer small DataFrame fixtures that exercise parsing, leakage guards, training threshold logic, prediction contracts, drift reports, and API readiness/prediction behavior.
+Tests live in `tests/` and use `pytest`. Prefer small DataFrame fixtures that exercise parsing, leakage guards, training threshold logic, prediction contracts, drift reports, and API readiness/prediction behavior. Portal tests share fixtures from `tests/conftest.py` (seeded SQLite database, a real linear bundle, an authenticated client); no fixture there is `autouse`, so the other modules stay self-contained. Portal privacy assertions are deliberately literal — they check that no rendered page exposes a direct identifier and that no template renders `payload_json`, which stores the full input record including the `moyenne_finale` leakage target.
 
 ## Commit & Pull Request Guidelines
 
@@ -34,4 +37,4 @@ Recent commits use short, imperative summaries in French or English, for example
 
 ## Security & Agent-Specific Instructions
 
-Treat `data/raw/`, generated databases under `artifacts/`, Postgres volumes, and `DECROCHAGE_PSEUDONYMIZATION_SECRET` as sensitive. Do not commit credentials, local notebooks with secrets, generated databases, or large regenerated artifacts unless they are required deliverables. Never use `rm -rf`; use `trash <path>` so files remain recoverable.
+Treat `data/raw/`, generated databases under `artifacts/`, Postgres volumes, `DECROCHAGE_PSEUDONYMIZATION_SECRET`, and `DECROCHAGE_PORTAL_SECRET` as sensitive. Never ship a default portal account, never accept a password as a CLI argument, and never widen the portal restitution whitelist beyond `bundle.feature_cols`. Do not commit credentials, local notebooks with secrets, generated databases, or large regenerated artifacts unless they are required deliverables. Never use `rm -rf`; use `trash <path>` so files remain recoverable.

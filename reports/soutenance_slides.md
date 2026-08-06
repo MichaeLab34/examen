@@ -23,7 +23,7 @@ style: |
 
 ### Concevoir et implémenter une solution d'IA — soutenance de certification
 
-**Staudt Michael** · *28/07/2026* · v1.6
+**Staudt Michael** · *28/07/2026* · v1.7
 Python 3.13 · scikit-learn · FastAPI · Postgres · MLflow · Prometheus/Grafana · C1→C9
 
 📦 **Code, tests et documentation** : [github.com/MichaeLab34/examen](https://github.com/MichaeLab34/examen)
@@ -47,12 +47,13 @@ Annoncer la durée et qu'on prendra les questions à la fin.
 5. **Modèle** : choix, **coût de calcul**, entraînement, seuil
 6. **Résultats** & explicabilité
 7. **Industrialisation & Run** : API, Docker, registre, alertes, rollback
-8. **Limites & recommandations**
+8. **Restitution** aux référents : du score à la décision humaine
+9. **Limites & recommandations**
 
 <!--
 [0:30] Donner la carte. Insister : « le fil rouge de ma démarche, c'est la
 RIGUEUR anti-fuite et l'EXPLICABILITÉ, parce que ce sont des données
-étudiantes sensibles. » Ne pas lire les 8 points un à un.
+étudiantes sensibles. » Ne pas lire les 9 points un à un.
 -->
 
 ---
@@ -390,7 +391,7 @@ JAMAIS pour prédire abandon.
 - **Sécurité API** : clé, limite de débit, requêtes corrélées sans journaliser les données.
 - **Cycle de vie** : runs MLflow (paramètres, métriques, artefacts), registre + rollback.
 - **Observabilité** : `/metrics`, dashboard Grafana provisionné, alertes et heartbeat.
-- **Qualité** : 59 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
+- **Qualité** : 111 tests `pytest`, lint/format, CI GitHub Actions, Dockerfile non-root.
 - Documentation : architecture, modèle, menace, monitoring, guide d'industrialisation.
 
 <!--
@@ -419,6 +420,32 @@ Fallback dev : SQLite local ignoré par Git.
 zone de preuve et de reprise, mais elle est restreinte. Silver pseudonymise.
 Gold est la seule source de modélisation et de scoring. Mentionner la commande :
 decrochage medallion-load.
+-->
+
+---
+
+## 14 bis. Restitution aux référents — C7 / C2 / C6
+
+**« Le score propose, l'humain décide » cesse d'être une intention.**  
+Le dernier bloc non implémenté du diagramme d'architecture est fermé.
+
+| Rôle | Ce qu'il voit | Ce qu'il ne voit jamais |
+|---|---|---|
+| `referent` | cohorte de ses filières triée par risque, fiche explicable, export | les autres filières |
+| `pilote` | indicateurs agrégés, simulation de seuil | aucun dossier individuel |
+| `auditeur` (DPO) | consultations, rétention, modèle actif | aucun score individuel |
+
+**Aucun nom affiché** — pseudonymes HMAC ; seul le SI scolarité ré-identifie, depuis l'export.  
+**Explication structurelle** — `coefficient × valeur transformée`, exacte sur un modèle linéaire ; ordre et sens, jamais un pourcentage.  
+**Lecture seule, désactivé par défaut** · hors périmètre → **404, pas 403** · export à 9 colonnes plafonné à 1 000 lignes · **52 tests** dédiés.
+
+<!--
+[1:00] Texte complet : SUPPORT_SOUTENANCE.md, slide 19 bis. Version courte
+1 min 52 en sautant les deux paragraphes marqués ⏸.
+L'accroche : « tant que ce bloc n'existait pas, mon "le score propose, l'humain
+décide" restait une intention — aucun référent n'avait matériellement les moyens
+de décider. » Si démo en direct : connexion → cohorte → fiche → export →
+conformité ; montrer que le pseudonyme est le même dans la fiche et dans le CSV.
 -->
 
 ---

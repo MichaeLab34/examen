@@ -65,7 +65,8 @@ Si le jury ne retient que trois choses, ce sont celles-ci. Chaque slide y ramèn
 | Régression | R² ≈ **0,68**, erreur ≈ **2,3 pts/20** | slide 17 |
 | Leurres | écart-type **1,6 à 2,3 pts** → aucun signal | slide 9 |
 | Éco-conception | boosting ≈ **×10**, RF ≈ **×20-30**, gain nul | slide 11 |
-| Tests | **59** tests, CI verte | slide 18 |
+| Tests | **111** tests, CI verte (dont **52** sur le portail) | slide 18, 19 bis |
+| Portail | **3 rôles** · export à **9 colonnes** fermées · plafond **1 000** lignes · effectif minimal **5** par filière | slide 19 bis |
 | Budget infra | **0 €** sur le serveur du LMS · sinon **10-20 €/mois** | slide 20 |
 
 ---
@@ -113,6 +114,8 @@ le temps que je dois y passer.
 
 **Le texte entier fait ~4150 mots**, soit **28 minutes à un débit normal de
 présentation** (~145 mots/min). C'est le rythme à tenir : ni précipité, ni traînant.
+**Avec le slide 19 bis en version longue, compter ~31 min** ; en version courte, le
+budget d'origine est préservé (voir l'encadré de ce slide).
 
 Si une slide me paraît courte à l'écran, c'est normal : la slide affiche l'ossature,
 c'est **moi** qui porte le contenu. Le texte ci-dessous est ce que la slide ne dit pas.
@@ -610,12 +613,13 @@ taux de réussite différents de ceux qu'il a appris.
 Tout le code structurant vit dans un package Python : le nettoyage, le périmètre de
 variables, l'entraînement, le scoring.
 
-Trois surfaces l'utilisent — le notebook pour la démonstration, une CLI pour le
+Quatre surfaces l'utilisent — le notebook pour la démonstration, une CLI pour le
 traitement par lots, une API FastAPI avec un contrat d'entrée-sortie explicite pour le
-scoring à la demande. Les trois importent le même code : je n'ai pas trois versions du
-nettoyage qui finiraient par diverger.
+scoring à la demande, et le portail de restitution dont je parlerai dans deux slides.
+Toutes importent le même code : je n'ai pas quatre versions du nettoyage qui
+finiraient par diverger.
 
-Autour : 59 tests automatisés, une intégration continue, et une image Docker qui ne
+Autour : 111 tests automatisés, une intégration continue, et une image Docker qui ne
 tourne pas en root. »
 
 ---
@@ -647,6 +651,73 @@ Et toutes les opérations sensibles sont tracées dans une table d'audit : qui a
 quoi, quand, sur quelles données.
 
 La protection est donc dans la plomberie, pas dans une note d'intention. »
+
+---
+
+### 🎬 Slide 19 bis · *14 bis. Restitution aux référents* — **de XX:XX à XX:XX** · 2 min 45 en version longue, 1 min 50 en version courte
+
+> ⏱️ **Minutage à caler — lire avant de décider.** Ce slide est placé après la
+> persistance parce qu'il s'appuie sur le pseudonyme HMAC qui vient d'être
+> expliqué. Le texte ci-dessous fait **392 mots, soit 2 min 42** au débit de
+> référence du document (145 mots/min) — l'ajouter tel quel porte le déroulé de
+> ~28 à ~31 min.
+>
+> Deux paragraphes sont marqués **⏸ optionnel** (122 mots à eux deux) : les
+> sauter ramène le slide à **1 min 52** sans casser l'argument, parce que le
+> noyau — le bloc manquant, le choix « aucun nom », la lecture seule — reste
+> entier. Les deux optionnels sont ceux qui ont une réponse prête dans le
+> tableau des questions du jury : si on me les demande, je les dis là. Ne pas couper au milieu
+> d'un paragraphe : c'est la règle du document, et un argument à moitié dit est
+> pire que non dit.
+
+**Je dis :**
+
+« Mon diagramme d'architecture prévoyait depuis le début un bloc « Restitution &
+pilotage ». Tant qu'il n'existait pas, ma phrase — le score propose, l'humain décide —
+restait une intention : aucun référent n'avait matériellement les moyens de décider.
+Le seul chemin de sortie du modèle était un appel d'API qui renvoie une probabilité,
+sans identité, sans explication, sans trace de consultation.
+
+J'ai donc fermé ce bloc. C'est un portail web servi par le même service, avec trois
+rôles. Le référent voit la liste de ses filières triée par risque, et pour chaque
+dossier une fiche qui affiche les cinq facteurs aggravants et les cinq facteurs
+protecteurs, en langage métier. Le responsable réussite étudiante n'a que des
+indicateurs agrégés par filière — il arbitre des moyens, il n'a pas besoin des
+dossiers. Et le DPO a une vue de conformité : qui a consulté quoi, quand, et pour
+quel motif — sans accéder à un seul score individuel.
+
+Trois décisions que je veux défendre.
+
+La première : le portail n'affiche **aucun nom**. Il travaille exclusivement sur les
+pseudonymes HMAC dont je viens de parler, et il n'a aucune table de correspondance.
+Pour obtenir des noms, le référent exporte un CSV à neuf colonnes fermées, et c'est le
+système d'information de la scolarité qui ré-identifie. J'y perds en confort — c'est
+un vrai coût, je l'assume — et j'y gagne qu'une compromission du portail n'expose
+aucune identité étudiante.
+
+*(⏸ optionnel — le paragraphe suivant se saute en version courte)*
+
+La deuxième : l'explicabilité n'est pas un module SHAP branché sur l'interface. Sur
+une régression logistique, la contribution d'une variable au log-odds, c'est
+exactement le coefficient multiplié par la valeur transformée. C'est la conséquence
+directe du choix de modèle que j'ai défendu tout à l'heure. Un test vérifie que la
+somme des contributions retombe sur la décision du modèle — si cet invariant tombe,
+la fiche afficherait des nombres qui ne décrivent plus la décision. Et j'affiche un
+ordre et un sens, jamais un pourcentage de responsabilité : les contributions
+s'additionnent sur le log-odds, pas en probabilité.
+
+La troisième : le portail est en **lecture seule** et **désactivé par défaut**. Il ne
+déclenche aucun scoring — sinon je produirais des prédictions rattachées à aucun lot,
+donc hors politique de rétention et non purgeables. Et un déploiement d'inférence pur
+n'expose aucune surface web du tout.
+
+*(⏸ optionnel — le paragraphe suivant se saute en version courte)*
+
+Un détail qui compte pour l'équité : la vue agrégée ne publie une ligne par filière
+qu'au-delà de cinq étudiants. En dessous, une médiane, c'est le score d'une personne. »
+
+**Si je démontre en direct :** connexion → cohorte → fiche → export → vue de
+conformité. Montrer que le pseudonyme est le même dans la fiche et dans le CSV.
 
 ---
 
@@ -899,6 +970,11 @@ L'avoir sous les yeux pendant les 30 min de questions.
 | **Que recouvre le TCO ?** | *Total Cost of Ownership*, le coût total de possession sur un an : hébergement, sauvegardes, temps DSI et DPO, revue annuelle du modèle, interventions. Pas seulement le serveur. |
 | **Quel ROI ?** | Le coût est chiffrable ; le gain, non — l'AUC ne mesure pas l'effet du tutorat. Méthode proposée : un pilote où une partie des étudiants signalés est accompagnée (tirage au sort), et comparaison des taux d'abandon en fin d'année. L'écart mesure l'effet réel. Je n'invente aucun chiffre. |
 | **Une tâche planifiée qui ne tourne plus ?** | Heartbeat externe : c'est l'absence de signal qui déclenche l'alerte. |
+| **Un portail sans noms, c'est inutilisable en vrai** | C'est le compromis que j'assume : le référent exporte et le SI ré-identifie, avec le même secret HMAC, sous contrôle DSI. La ré-identification dans le portail est réalisable — elle exige un chiffrement applicatif, une rotation de secret et probablement une AIPD. C'est une décision à prendre **avec le DPO**, pas une limite technique. |
+| **Pourquoi pas SHAP dans le portail ?** | Sur un modèle linéaire, la contribution exacte est `coefficient × valeur transformée`. SHAP en donnerait une **approximation** par échantillonnage, plus coûteuse. Un test vérifie que la somme des contributions égale la décision du modèle. SHAP reste dans le notebook, pour l'analyse globale. |
+| **Un référent peut-il voir toute la promotion ?** | Non. Le périmètre est appliqué **dans la requête SQL**, jamais dans le gabarit, et un dossier hors périmètre renvoie **404, pas 403** — une frontière ne doit pas confirmer l'existence d'un dossier. Sans ligne Silver, le dossier est invisible : fail-closed. |
+| **Qu'est-ce qui empêche l'exfiltration de masse ?** | Export plafonné à 1 000 lignes, colonnes fermées, chaque export audité avec l'acteur, le volume et le périmètre. Ce n'est pas infaillible — c'est de la réduction de surface, doublée de traçabilité. |
+| **Le portail peut-il déclencher une action sur l'étudiant ?** | Non, et c'est délibéré : article 22. Il n'envoie rien, ne convoque personne, ne modifie aucun dossier. La boucle de retour des référents — l'issue du contact — est ma première évolution en roadmap, parce qu'elle produirait les labels récents qui manquent aujourd'hui. |
 
 **Si je ne sais pas** : « Je ne l'ai pas traité dans ce projet. Voici comment je m'y
 prendrais : … » — bien meilleur qu'une improvisation.

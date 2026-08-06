@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Portail de restitution{% endblock %} — Décrochage L1</title>
+  <link rel="stylesheet" href="{{ base_path }}/static/portail.css">
+  <!-- Sans cette déclaration le navigateur réclame /favicon.ico à la racine et
+       journalise un 404 : bruit inutile dans la console d'un poste agent. -->
+  <link rel="icon" href="{{ base_path }}/static/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<a class="skip-link" href="#contenu">Aller au contenu</a>
+
+<header class="app-header">
+  <div class="app-header__title">
+    <span class="app-header__product">Décrochage L1</span>
+    <span class="app-header__subtitle">Portail de restitution</span>
+  </div>
+  {% if identity %}
+  <div class="app-header__session">
+    <span class="app-header__user">{{ identity.label }}</span>
+    <span class="badge badge--role">{{ role_label }}</span>
+    <span class="app-header__scope">{{ identity.scope_label }}</span>
+    <form method="post" action="{{ base_path }}/logout" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit" class="button button--ghost">Se déconnecter</button>
+    </form>
+  </div>
+  {% endif %}
+</header>
+
+{% if identity %}
+<nav class="app-nav" aria-label="Navigation principale">
+  <ul>
+    {% for item in nav_items %}
+    <li><a href="{{ item.href }}" {% if item.current %}aria-current="page" class="is-current"{% endif %}>{{ item.label }}</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+{% endif %}
+
+{% block warning %}
+{% if identity %}
+<aside class="notice notice--warning" role="note">
+  <strong>Score d'aide à la décision.</strong>
+  Aucune mesure ne doit être prise sur ce seul fondement : la décision appartient à
+  l'équipe pédagogique. Modèle entraîné sur données synthétiques, non revalidé sur
+  données réelles.
+</aside>
+{% endif %}
+{% endblock %}
+
+<main id="contenu">
+  {% if flash %}
+  <p class="notice notice--error" role="alert">{{ flash }}</p>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="app-footer">
+  <p>
+    Données pseudonymisées (HMAC-SHA-256). Aucun identifiant étudiant en clair ne
+    transite par ce portail : la ré-identification relève du SI scolarité.
+  </p>
+  <p>Consultations et exports journalisés au titre de la redevabilité RGPD.</p>
+  <p><a href="{{ base_path }}/conformite-ia-rgpd">Conformité IA &amp; RGPD</a></p>
+</footer>
+<script src="{{ base_path }}/static/portail.js" defer></script>
+</body>
+</html>

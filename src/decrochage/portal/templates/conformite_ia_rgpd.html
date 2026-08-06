@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Conformité IA &amp; RGPD{% endblock %}
+{% block warning %}{% endblock %}
+
+{% block content %}
+<h1>Conformité IA &amp; RGPD — périmètre de démonstration</h1>
+
+<p class="actions">
+  <a class="button" href="{{ request.headers.get('referer') or '/portal/' }}">← Retour</a>
+</p>
+
+<p class="notice notice--warning" role="note">
+  <strong>Ce portail est un prototype d'examen, avec données de démonstration/synthétiques ; il ne constitue pas un dispositif de décision automatisée.</strong>
+</p>
+
+<p class="notice notice--info">
+  Cette page présente un périmètre de démonstration et des points de vigilance. Elle
+  ne constitue pas une certification juridique, un avis juridique ni une validation de
+  conformité pour un usage réel.
+</p>
+
+<section class="card">
+  <h2>Ce que le prototype fait</h2>
+  <ul>
+    <li>Calcule un score de risque de décrochage à partir de données synthétiques.</li>
+    <li>Aide à prioriser un accompagnement humain, sans se substituer à l'équipe pédagogique.</li>
+    <li>Met en œuvre, dans son périmètre technique, pseudonymisation, minimisation, rétention et audit des consultations.</li>
+    <li>Présente des facteurs explicatifs pour rendre le score compréhensible et discutable.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Ce qu'il ne fait pas</h2>
+  <ul>
+    <li>Il ne prononce aucune sanction, exclusion ou orientation automatique.</li>
+    <li>Il ne réalise aucune reconnaissance émotionnelle ni biométrique.</li>
+    <li>Il n'utilise pas d'IA générative.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Transparence et rôle humain</h2>
+  <p>
+    Dans un usage réel, l'étudiant doit être informé de l'usage d'un système d'IA,
+    de sa finalité, des données utilisées et de la place de l'accompagnement humain.
+    Le score est un signal de travail : l'équipe pédagogique apprécie la situation,
+    échange avec l'étudiant et prend seule les décisions d'accompagnement.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Pour un usage réel</h2>
+  <p class="muted">
+    Les éléments suivants restent à réaliser, documenter et valider avant tout
+    traitement de données étudiantes réelles.
+  </p>
+  <ul>
+    <li><span class="badge badge--alert">Non livré</span> Validation par le DPO de la base légale et du traitement.</li>
+    <li><span class="badge badge--alert">Non livré</span> Information des étudiants et exercice effectif de leurs droits.</li>
+    <li><span class="badge badge--alert">Non livré</span> Analyse d'impact relative à la protection des données (AIPD).</li>
+    <li><span class="badge badge--alert">Non livré</span> Analyse de classification au regard de l'AI Act et FRIA éventuelle.</li>
+    <li><span class="badge badge--alert">Non livré</span> Tests de biais complets, représentatifs et suivis dans le temps.</li>
+    <li><span class="badge badge--alert">Non livré</span> Données réelles qualifiées et validation du bénéfice d'accompagnement.</li>
+    <li><span class="badge badge--alert">Non livré</span> Sécurité de production : authentification API obligatoire, chiffrement au repos, coffre de secrets et rotation des secrets.</li>
+    <li><span class="badge badge--alert">Non livré</span> Politique de rétention des artefacts et des logs, avec purge et contrôle documentés.</li>
+    <li><span class="badge badge--alert">Non livré</span> Procédure de gestion et de notification des incidents, incluant le délai RGPD de 72 heures lorsque applicable.</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Sources officielles</h2>
+  <ul>
+    <li><a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj?locale=fr">AI Act — règlement (UE) 2024/1689, EUR-Lex</a></li>
+    <li><a href="https://digital-strategy.ec.europa.eu/en/faqs/ai-act-questions-and-answers">Commission européenne — FAQ AI Act</a></li>
+    <li><a href="https://ai-act-service-desk.ec.europa.eu/fr/ai-act/article-5">AI Act Service Desk — article 5, pratiques interdites</a></li>
+    <li><a href="https://ai-act-service-desk.ec.europa.eu/fr/ai-act/article-26">AI Act Service Desk — article 26, obligations des déployeurs</a></li>
+    <li><a href="https://ai-act-service-desk.ec.europa.eu/fr/ai-act/article-27">AI Act Service Desk — article 27, évaluation des droits fondamentaux</a></li>
+    <li><a href="https://ai-act-service-desk.ec.europa.eu/fr/ai-act/article-50">AI Act Service Desk — article 50, transparence</a></li>
+    <li><a href="https://www.cnil.fr/fr/reglement-europeen-protection-donnees">CNIL — règlement général sur la protection des données</a></li>
+    <li><a href="https://www.cnil.fr/fr/services-en-ligne/notifier-une-violation-de-donnees-personnelles">CNIL — notifier une violation de données personnelles</a></li>
+  </ul>
+</section>
+{% endblock %}
