@@ -490,6 +490,10 @@ def build_portal_router(settings: PortalSettings) -> APIRouter:
     def login_form(request: Request, next: str | None = None) -> HTMLResponse:
         return render(request, "login.html", None, {"next_url": _safe_next(next)})
 
+    @router.get("/conformite-ia-rgpd", response_class=HTMLResponse)
+    def conformite_ia_rgpd(request: Request) -> HTMLResponse:
+        return render(request, "conformite_ia_rgpd.html", None, {})
+
     @router.post("/login")
     def login_submit(
         request: Request,
