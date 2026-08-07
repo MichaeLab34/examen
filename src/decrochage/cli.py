@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Annotated
@@ -40,6 +41,35 @@ from .scheduler import (
 from .serving import load_bundle, predict_proba_abandon
 from .tracking import track_training_result
 from .training import build_gold_dataset, prepare_training_frame, train_model
+
+
+def _configure_stdio() -> None:
+    """Force UTF-8 on stdout/stderr so third-party output cannot abort a command.
+
+    MLflow 3.15 writes run links prefixed with emoji ("🏃 View run ...") on
+    stdout. A Windows console defaults to cp1252, which cannot encode them: the
+    resulting `UnicodeEncodeError` is raised *inside* `mlflow.end_run`, so a
+    training command fails after the run has been recorded — the work is done but
+    the CLI reports an error.
+
+    Setting `PYTHONIOENCODING=utf-8` in the shell fixes it too, but that lives
+    outside the repository and every machine would have to be configured again.
+    Doing it here makes the CLI correct on its own.
+
+    `errors="replace"` is a second safety net: a stream that still cannot encode
+    a character degrades it instead of interrupting the command.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:  # stream remplacé (capture pytest, pipe exotique)
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):  # pragma: no cover - dépend du terminal
+            pass
+
+
+_configure_stdio()
 
 app = typer.Typer(help="Industrialized commands for the decrochage project.")
 
