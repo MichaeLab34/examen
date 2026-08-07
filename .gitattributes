@@ -1,0 +1,25 @@
+# Normalisation des fins de ligne
+#
+# Ce dépôt est travaillé depuis macOS et Windows. `core.autocrlf` fait
+# aujourd'hui le travail sur les postes concernés, mais c'est une configuration
+# **locale et non versionnée** : rien ne garantit qu'un poste futur l'ait, et un
+# fichier committé en CRLF ne se corrige pas tout seul. Les règles ci-dessous
+# rendent la garantie intrinsèque au dépôt.
+#
+# Elles ne visent que les fichiers pour lesquels un `\r` a une conséquence
+# fonctionnelle, pas l'ensemble du dépôt : pas de `* text=auto`, qui
+# renormaliserait tous les fichiers au prochain checkout.
+
+# Scripts shell : bash sur macOS et Linux n'ignore pas les CR. Vérifié sur
+# `bash:5` — un script en CRLF échoue sur `$'\r': command not found` et, plus
+# grave, sur `set: pipefail: invalid option name` : il perd ses garde-fous et
+# poursuit son exécution sans `set -euo pipefail`.
+*.sh text eol=lf
+
+# Modèle de configuration : il est copié en `.env`, puis lu par Docker Compose
+# et par les settings Pydantic. Un CRLF introduirait un `\r` **dans la valeur**
+# des variables — un secret ou une URL de base invisiblement corrompu.
+.env.example text eol=lf
+
+# Instructions de build exécutées dans un conteneur Linux.
+Dockerfile text eol=lf

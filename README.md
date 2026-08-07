@@ -70,6 +70,7 @@ uv run decrochage check-data data/raw/decrochage_etudiants_complet_V5.csv data/r
 uv run decrochage init-db
 uv run decrochage medallion-load data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv
 uv run decrochage purge-expired
+bash scripts/generate-local-certs.sh      # prérequis Caddy : certificats TLS locaux
 docker compose --profile run up --build   # inclut MLflow sur http://localhost:5000
 $training = uv run decrochage train data/raw/decrochage_etudiants_complet_V5.csv data/raw/catalogue_formations_V5.csv --tracking-uri http://localhost:5000 | ConvertFrom-Json
 uv run decrochage model-register artifacts/models/model_bundle.joblib --run-id $training.mlflow.run_id --registry-uri http://localhost:5000

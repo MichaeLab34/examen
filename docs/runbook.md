@@ -38,6 +38,54 @@
 3. Ne jamais ajouter le payload étudiant ou la clé d'API aux journaux.
 4. En déploiement multi-instance, activer un limiteur partagé au niveau du point d'entrée.
 
+## Caddy ne démarre pas : certificats TLS absents
+
+**Symptôme.** `docker compose ps -a caddy` montre `Exited (1)` et
+`docker compose logs caddy` répète :
+
+```text
+Error: loading initial config: loading new config: loading http app module:
+provision http: getting tls app: loading tls app module: provision tls:
+loading certificates: open /etc/caddy/certs/localhost.crt:
+no such file or directory
+```
+
+**Cause.** Le `Caddyfile` référence des certificats explicites que le
+`compose.yaml` monte depuis `./caddy-certs`. Ce répertoire est absent du dépôt
+(`.gitignore`) : une clé privée ne se versionne pas. Un clone frais, ou une
+nouvelle machine de travail, ne l'a donc pas. Caddy refuse de démarrer plutôt
+que de servir en clair — le comportement est volontaire.
+
+**Correctif.**
+
+```bash
+bash scripts/generate-local-certs.sh        # idempotent : ne fait rien si déjà présents
+docker compose --profile run up -d caddy
+```
+
+Le script génère une paire auto-signée valable 825 jours, avec les noms
+alternatifs `localhost`, `api`, `mlflow` et `127.0.0.1`. Il s'exécute sur macOS,
+Linux et Windows (Git Bash). `--force` régénère une paire expirée.
+
+**Vérification.**
+
+```bash
+curl -sk -o /dev/null -w "%{http_code}\n" https://localhost/health   # 200 attendu
+curl -skI https://localhost/health | grep -i content-security-policy
+```
+
+**Points d'attention.**
+
+- Le navigateur signalera un certificat non approuvé : c'est normal pour de
+  l'auto-signé. Accepter l'exception **avant** une démonstration en direct, pas
+  devant le jury.
+- Les noms de fichiers sont figés dans le `Caddyfile` (`localhost.crt`). Changer
+  `DECROCHAGE_DOMAIN` sans adapter le `Caddyfile` produirait un certificat qui ne
+  correspond plus au nom du site.
+- Ne jamais committer `caddy-certs/` : le répertoire contient une clé privée.
+- En production, retirer la directive `tls` explicite et laisser Caddy obtenir un
+  certificat par ACME, ce qu'il fait automatiquement pour un domaine public.
+
 ## Mise en service du portail dans la stack Docker
 
 Le portail est un service de restitution : il n'affiche que ce qui est déjà en
