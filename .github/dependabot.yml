@@ -1,0 +1,30 @@
+version: 2
+
+# Ce fichier active les mises à jour de **version** des actions GitHub.
+#
+# Sans lui, Dependabot ne traitait que les alertes de **sécurité** des
+# dépendances Python : les versions d'actions dérivaient donc silencieusement
+# jusqu'à la dépréciation de leur runtime Node, ce qui est exactement ce qui
+# s'est produit avec actions/checkout@v4 et astral-sh/setup-uv@v5.
+#
+# Les mises à jour de sécurité Python restent actives indépendamment de ce
+# fichier : elles ne sont pas désactivées par cette déclaration.
+
+updates:
+  - package-ecosystem: "github-actions"
+    # Racine du dépôt : Dependabot y cherche `.github/workflows/`.
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Paris"
+    # Une seule PR regroupant toutes les actions, plutôt qu'une par action :
+    # un seul run de CI à surveiller et une seule revue humaine.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "ci"
