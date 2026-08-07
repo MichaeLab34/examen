@@ -16,11 +16,17 @@ dist/
 .ipynb_checkpoints/
 
 # Artefacts générés (modèles, figures) — régénérables par le notebook
-artifacts/models/*.joblib
-artifacts/figures/*.png
-artifacts/*.db
-artifacts/*.sqlite
-artifacts/*.sqlite3
+#
+# Les motifs utilisent `**` et non `*` : une base ou un modèle écrit dans un
+# sous-répertoire d'artifacts/ (sauvegarde ponctuelle, run daté, export d'outil)
+# échapperait sinon au garde-fou et pourrait être committé par inadvertance.
+# `**` couvre aussi le premier niveau, rien n'est donc perdu par rapport aux
+# motifs précédents.
+artifacts/**/*.joblib
+artifacts/**/*.png
+artifacts/**/*.db
+artifacts/**/*.sqlite
+artifacts/**/*.sqlite3
 artifacts/mlflow-artifacts/
 artifacts/mlflow-server/
 
