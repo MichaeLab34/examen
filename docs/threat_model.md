@@ -45,6 +45,65 @@ que des événements d'audit. Une compromission ne permet donc ni de produire de
 prédictions hors lot, ni de modifier un dossier, ni d'obtenir une identité
 étudiante en clair — le portail ne détient aucune table de correspondance.
 
+## Vulnérabilités des dépendances
+
+La chaîne d'approvisionnement est surveillée de deux façons complémentaires :
+les alertes de sécurité Dependabot (activées sur le dépôt), et un audit local
+reproductible qui ne dépend d'aucun droit GitHub :
+
+```bash
+uv export --format requirements-txt --no-emit-project --no-hashes > /tmp/req.txt
+uvx pip-audit -r /tmp/req.txt
+```
+
+Les mises à jour de **version** des actions GitHub sont suivies par
+`.github/dependabot.yml` (écosystème `github-actions`, groupé en une PR
+hebdomadaire). Sans cette déclaration, seules les alertes de sécurité Python
+étaient traitées, et les versions d'actions dérivaient jusqu'à la dépréciation
+de leur runtime — ce qui s'était produit avec `actions/checkout@v4` et
+`astral-sh/setup-uv@v5`.
+
+### Vulnérabilité résiduelle acceptée (état au 2026-08-07)
+
+| Champ | Valeur |
+|---|---|
+| Avis | `PYSEC-2026-3552` · `CVE-2026-69247` · `GHSA-g6cj-pr64-35w5` |
+| Paquet | `cryptography` 49.0.0 (dépendance **transitive**) |
+| Sévérité | CVSS 4.0 `AV:N/AC:H/AT:P/PR:N/UI:N/VC:H/VI:N/VA:N` — complexité d'attaque élevée, prérequis nécessaires |
+| Nature | Oracle de Bleichenbacher lors du déchiffrement PKCS#7 `EnvelopedData` : les erreurs et le temps de réponse de `pkcs7_decrypt_der`, `pkcs7_decrypt_pem` et `pkcs7_decrypt_smime` sont distinguables |
+| Version corrigée | 50.0.0 |
+| Statut | **Non corrigeable en l'état** |
+
+**Pourquoi la montée est impossible.** MLflow borne cette dépendance :
+`mlflow 3.14.0` exige `cryptography>=43.0.0,<49` et `mlflow 3.15.1` — la version
+la plus récente — `cryptography>=43.0.0,<50`. Aucune version publiée de MLflow
+n'autorise donc 50.0.0. C'est une contrainte amont, pas un choix de ce projet.
+
+**Ce qui a néanmoins été corrigé.** Monter MLflow de 3.14.0 à 3.15.1 a permis de
+passer `cryptography` de 48.0.1 à 49.0.0, ce qui ferme deux des trois
+vulnérabilités constatées (`PYSEC-2026-3553` et `PYSEC-2026-3554`, corrigées en
+49.0.0).
+
+**Pourquoi le risque résiduel est nul dans ce périmètre.** L'avis conditionne
+explicitement l'exploitation à « une application qui déchiffre un
+`EnvelopedData` fourni par un attaquant et en reflète le résultat ». Ce projet
+n'expose aucun chemin de ce type : ni `pkcs7`, ni `enveloped`, ni `smime`, ni
+même un `import cryptography` n'apparaissent dans `src/`, `tests/` ou le
+notebook. La bibliothèque n'est présente que comme dépendance transitive de
+`codecarbon` et de `mlflow`, qui ne l'utilisent pas non plus pour déchiffrer une
+entrée fournie par un tiers. Le code vulnérable n'est jamais atteint.
+
+**Condition de lever.** Réexécuter l'audit dès que MLflow relève sa borne à
+`cryptography<51`, puis `uv lock --upgrade-package cryptography`. Cette
+acceptation est datée et doit être réévaluée à chaque cycle de maintenance : une
+vulnérabilité non exploitable aujourd'hui le redeviendrait si le projet
+introduisait un déchiffrement PKCS#7.
+
+**Réserve de méthode.** Cette analyse porte sur l'atteignabilité du code
+vulnérable, pas sur une revue du code de `cryptography`. Elle vaut pour le
+périmètre actuel et sur données synthétiques ; une mise en service réelle exige
+la validation d'un expert en sécurité applicative.
+
 ## Notes RGPD
 
 - Finalité : accompagnement pédagogique, pas sanction.
